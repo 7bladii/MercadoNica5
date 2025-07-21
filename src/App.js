@@ -96,6 +96,10 @@ export default function App() {
             setHistory(prev => prev.slice(0, -1));
         }
     };
+    
+    const goHome = () => {
+        setHistory([{ page: 'home' }]);
+    };
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -124,7 +128,7 @@ export default function App() {
     }, []);
 
     const handleLogin = async () => { try { await signInWithPopup(auth, googleProvider); } catch (error) { console.error("Error al iniciar sesión con Google:", error); } };
-    const handleLogout = () => { auth.signOut(); setHistory([{ page: 'home' }]); };
+    const handleLogout = () => { auth.signOut(); goHome(); };
     const navigateToMessages = (chat) => { setActiveChat(chat); setView({ page: 'messages' }); };
 
     const renderContent = () => {
@@ -141,7 +145,7 @@ export default function App() {
 
     return ( 
         <div className="bg-gray-100 min-h-screen font-sans">
-            <Header user={user} onLogin={handleLogin} onLogout={handleLogout} setView={setView} notificationCount={0} />
+            <Header user={user} onLogin={handleLogin} onLogout={handleLogout} setView={setView} goHome={goHome} notificationCount={0} />
             <main className="p-4 md:p-8 container mx-auto">
                 {history.length > 1 && <BackButton onClick={goBack} />}
                 {renderContent()}
@@ -159,11 +163,11 @@ function BackButton({ onClick }) {
     );
 }
 
-function Header({ user, onLogin, onLogout, setView, notificationCount }) {
+function Header({ user, onLogin, onLogout, setView, goHome, notificationCount }) {
     return (
         <header className="bg-white shadow-md sticky top-0 z-50">
             <nav className="container mx-auto px-4 py-3 flex justify-between items-center">
-                <div className="flex items-center cursor-pointer" onClick={() => setHistory([{ page: 'home' }])}>
+                <div className="flex items-center cursor-pointer" onClick={goHome}>
                     {/* <img src={logo} alt="Logo MercadoNica" className="h-10 mr-2" /> */}
                     <span className="text-2xl font-bold text-blue-600">Mercado<span className="text-sky-500">Nica</span></span>
                 </div>
