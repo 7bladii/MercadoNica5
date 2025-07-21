@@ -1,8 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import App from './App';
 
-test('renders learn react link', () => {
+test('muestra el logo', () => {
   render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+  // Cambia el alt por el valor real de tu <img>
+  const logo = screen.getByAltText(/logo/i);
+  expect(logo).toBeInTheDocument();
 });
