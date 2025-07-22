@@ -103,6 +103,7 @@ const BriefcaseIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="
 const TagIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-5 5a2 2 0 01-2.828 0l-7-7A2 2 0 013 8V3z" /></svg>);
 const ArrowLeftIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" /></svg>;
 const CameraIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
+const SpinnerIcon = () => <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
 
 // --- COMPONENTE PRINCIPAL ---
 export default function App() {
@@ -263,7 +264,6 @@ function PublishPage({ type, setView, user }) {
         e.preventDefault();
         if (!user) { alert("Debes iniciar sesión."); return; }
         
-        // Validación diferente para empleos y productos
         if (!formData.title || !location || !formData.category) {
             alert("Por favor, completa el título, categoría y ubicación.");
             return;
@@ -295,6 +295,7 @@ function PublishPage({ type, setView, user }) {
         } catch (error) {
             console.error("Error al publicar:", error);
             alert("Hubo un error al publicar tu anuncio.");
+        } finally {
             setIsSubmitting(false);
         }
     };
@@ -329,7 +330,13 @@ function PublishPage({ type, setView, user }) {
                     </div>
                 )}
 
-                <div className="flex justify-end space-x-4"><button type="button" onClick={() => setView({ page: 'listings', type: type })} className="bg-gray-200 px-4 py-2 rounded-lg">Cancelar</button><button type="submit" disabled={isSubmitting} className="bg-blue-600 text-white px-4 py-2 rounded-lg disabled:bg-blue-300">{isSubmitting ? 'Publicando...' : 'Publicar'}</button></div>
+                <div className="flex justify-end space-x-4">
+                    <button type="button" onClick={() => setView({ page: 'listings', type: type })} className="bg-gray-200 px-4 py-2 rounded-lg">Cancelar</button>
+                    <button type="submit" disabled={isSubmitting} className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center disabled:bg-blue-300">
+                        {isSubmitting && <SpinnerIcon />}
+                        {isSubmitting ? 'Publicando...' : 'Publicar'}
+                    </button>
+                </div>
             </form>
         </div></div>
     );
