@@ -1,11 +1,8 @@
 [
   {
     "origin": ["https://mercadonica-vercel.app"],
-    "method": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    "responseHeader": [
-      "Content-Type",
-      "Access-Control-Allow-Origin"
-    ],
+    "method": ["GET", "POST", "PUT"],
+    "responseHeader": ["Content-Type"],
     "maxAgeSeconds": 3600
   }
 ]
