@@ -79,7 +79,11 @@ const googleProvider = new GoogleAuthProvider();
 try { enableIndexedDbPersistence(db, { cacheSizeBytes: CACHE_SIZE_UNLIMITED }); } catch (error) { console.error("Error al inicializar la persistencia de Firestore:", error); }
 
 // --- ICONOS ---
-const BellIcon = ({ hasNotification }) => ( <div className="relative"><svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>{hasNotification && <span className="absolute top-0 right-0 block h-3 w-3 rounded-full bg-red-500 ring-2 ring-white"></span>}</div>);
+const HomeIcon = ({isActive}) => <svg className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>;
+const MessagesIcon = ({isActive}) => <svg className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>;
+const PlusCircleIcon = () => <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" /></svg>;
+const ListingsIcon = ({isActive}) => <svg className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>;
+const AccountIcon = ({isActive}) => <svg className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
 const BriefcaseIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>);
 const TagIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-5 5a2 2 0 01-2.828 0l-7-7A2 2 0 013 8V3z" /></svg>);
 const ArrowLeftIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" /></svg>;
@@ -91,7 +95,9 @@ export default function App() {
     const [user, setUser] = useState(null);
     const [history, setHistory] = useState([{ page: 'home' }]);
     const [activeChat, setActiveChat] = useState(null);
+    const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
     const currentView = history[history.length - 1];
+    
     const setView = (newView) => setHistory(prev => [...prev, newView]);
     const goBack = () => { if (history.length > 1) setHistory(prev => prev.slice(0, -1)); };
     const goHome = () => setHistory([{ page: 'home' }]);
@@ -110,7 +116,31 @@ export default function App() {
 
     const handleLogin = async () => { try { await signInWithPopup(auth, googleProvider); } catch (error) { console.error("Error al iniciar sesión con Google:", error); } };
     const handleLogout = () => { auth.signOut(); goHome(); };
-    const navigateToMessages = (chat) => { setActiveChat(chat); setView({ page: 'messages' }); };
+    
+    const navigateToMessages = async (chatInfo) => {
+        if (!auth.currentUser) return;
+        const chatId = [auth.currentUser.uid, chatInfo.recipientId].sort().join('_');
+        const chatRef = doc(db, "chats", chatId);
+        const chatDoc = await getDoc(chatRef);
+
+        if (!chatDoc.exists()) {
+            await setDoc(chatRef, {
+                participants: [auth.currentUser.uid, chatInfo.recipientId],
+                participantInfo: {
+                    [auth.currentUser.uid]: { displayName: auth.currentUser.displayName, photoURL: auth.currentUser.photoURL },
+                    [chatInfo.recipientId]: { displayName: chatInfo.recipientName, photoURL: chatInfo.recipientPhotoURL }
+                },
+                messages: [], createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+            });
+        }
+        
+        const finalChatDoc = await getDoc(chatRef);
+        const recipientId = finalChatDoc.data().participants.find(p => p !== auth.currentUser.uid);
+        const recipientInfo = finalChatDoc.data().participantInfo[recipientId];
+
+        setActiveChat({ id: finalChatDoc.id, ...finalChatDoc.data(), recipientInfo });
+        setView({ page: 'messages' });
+    };
 
     const renderContent = () => {
         switch (currentView.page) {
@@ -125,12 +155,74 @@ export default function App() {
         }
     };
 
-    return ( <div className="bg-gray-100 min-h-screen font-sans"><Header user={user} onLogin={handleLogin} onLogout={handleLogout} setView={setView} goHome={goHome} notificationCount={0} /><main className="p-4 md:p-8 container mx-auto">{history.length > 1 && <BackButton onClick={goBack} />}{renderContent()}</main><Footer /></div> );
+    return ( 
+        <div className="bg-gray-100 min-h-screen font-sans">
+            <Header user={user} onLogin={handleLogin} onLogout={handleLogout} setView={setView} goHome={goHome} notificationCount={0} />
+            <main className="p-4 md:p-8 container mx-auto pb-24 md:pb-8">
+                {history.length > 1 && <BackButton onClick={goBack} />}
+                {renderContent()}
+            </main>
+            {isPublishModalOpen && <PublishModal setView={setView} closeModal={() => setIsPublishModalOpen(false)} />}
+            <BottomNavBar setView={setView} currentView={currentView} openPublishModal={() => setIsPublishModalOpen(true)} goHome={goHome} />
+            <Footer />
+        </div> 
+    );
 }
 
 function BackButton({ onClick }) { return ( <button onClick={onClick} className="flex items-center text-gray-600 hover:text-gray-900 font-semibold mb-4"><ArrowLeftIcon /> Volver</button> ); }
-function Header({ user, onLogin, onLogout, setView, goHome, notificationCount }) { return ( <header className="bg-white shadow-md sticky top-0 z-50"><nav className="container mx-auto px-4 py-3 flex justify-between items-center"><div className="flex items-center cursor-pointer" onClick={goHome}><span className="text-2xl font-bold text-blue-600">Mercado<span className="text-sky-500">Nica</span></span></div><div className="flex items-center space-x-4">{user && <div className="cursor-pointer" onClick={() => setView({ page: 'messages' })}><BellIcon hasNotification={notificationCount > 0} /></div>}{user ? (<div className="relative group"><img src={user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`} alt="Perfil" className="w-10 h-10 rounded-full cursor-pointer" /><div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-20 hidden group-hover:block"><span className="block px-4 py-2 text-sm text-gray-700 font-semibold truncate">{user.displayName}</span><a href="#" onClick={() => setView({ page: 'profile' })} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Mi Perfil</a><a href="#" onClick={onLogout} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cerrar Sesión</a></div></div>) : ( <button onClick={onLogin} className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">Iniciar Sesión</button> )}</div></nav></header> ); }
-function Footer() { return ( <footer className="bg-white mt-12 py-6 border-t"><div className="container mx-auto text-center text-gray-600"><p>&copy; {new Date().getFullYear()} MercadoNica. Todos los derechos reservados.</p></div></footer> ); }
+function Header({ user, onLogin, onLogout, setView, goHome, notificationCount }) { return ( <header className="bg-white shadow-md sticky top-0 z-50 hidden md:block"><nav className="container mx-auto px-4 py-3 flex justify-between items-center"><div className="flex items-center cursor-pointer" onClick={goHome}><span className="text-2xl font-bold text-blue-600">Mercado<span className="text-sky-500">Nica</span></span></div><div className="flex items-center space-x-4">{user && <div className="cursor-pointer" onClick={() => setView({ page: 'messages' })}><BellIcon hasNotification={notificationCount > 0} /></div>}{user ? (<div className="relative group"><img src={user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`} alt="Perfil" className="w-10 h-10 rounded-full cursor-pointer" /><div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-20 hidden group-hover:block"><span className="block px-4 py-2 text-sm text-gray-700 font-semibold truncate">{user.displayName}</span><a href="#" onClick={() => setView({ page: 'profile' })} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Mi Perfil</a><a href="#" onClick={onLogout} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cerrar Sesión</a></div></div>) : ( <button onClick={onLogin} className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">Iniciar Sesión</button> )}</div></nav></header> ); }
+function Footer() { return ( <footer className="bg-white mt-12 py-6 border-t hidden md:block"><div className="container mx-auto text-center text-gray-600"><p>&copy; {new Date().getFullYear()} MercadoNica. Todos los derechos reservados.</p></div></footer> ); }
+
+function BottomNavBar({ setView, currentView, openPublishModal, goHome }) {
+    const navItems = [
+        { name: 'Inicio', icon: HomeIcon, page: 'home', action: goHome },
+        { name: 'Mensajes', icon: MessagesIcon, page: 'messages', action: () => setView({ page: 'messages' }) },
+        { name: 'Publicar', icon: PlusCircleIcon, page: 'publish', action: openPublishModal, isCentral: true },
+        { name: 'Anuncios', icon: ListingsIcon, page: 'myListings', action: () => setView({ page: 'myListings' }) },
+        { name: 'Cuenta', icon: AccountIcon, page: 'profile', action: () => setView({ page: 'profile' }) },
+    ];
+
+    return (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50">
+            <div className="flex justify-around items-center h-16">
+                {navItems.map(item => {
+                    const isActive = currentView.page === item.page;
+                    const Icon = item.icon;
+                    if (item.isCentral) {
+                        return (
+                            <button key={item.name} onClick={item.action} className="bg-blue-600 rounded-full w-14 h-14 flex items-center justify-center -mt-6 shadow-lg">
+                                <Icon />
+                            </button>
+                        );
+                    }
+                    return (
+                        <button key={item.name} onClick={item.action} className="flex flex-col items-center justify-center text-xs">
+                            <Icon isActive={isActive} />
+                            <span className={`mt-1 ${isActive ? 'text-blue-600' : 'text-gray-500'}`}>{item.name}</span>
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
+function PublishModal({ setView, closeModal }) {
+    const handleSelect = (type) => {
+        setView({ page: 'publish', type });
+        closeModal();
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={closeModal}>
+            <div className="bg-white rounded-lg p-8 space-y-4" onClick={e => e.stopPropagation()}>
+                <h2 className="text-xl font-bold text-center">¿Qué quieres publicar?</h2>
+                <button onClick={() => handleSelect('producto')} className="w-full bg-green-500 text-white py-3 rounded-lg font-semibold">Vender un Artículo</button>
+                <button onClick={() => handleSelect('empleo')} className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold">Publicar un Empleo</button>
+            </div>
+        </div>
+    );
+}
 
 function HomePage({ setView }) {
     const [recentListings, setRecentListings] = useState([]);
@@ -152,7 +244,6 @@ function HomePage({ setView }) {
                 <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">Bienvenido a MercadoNica</h1>
                 <p className="text-gray-600 text-lg">¿Qué estás buscando hoy?</p>
             </div>
-
             <div className="flex justify-center gap-6 mb-12">
                 <div onClick={() => setView({ page: 'listings', type: 'empleo' })} className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 cursor-pointer flex flex-col items-center text-center w-full max-w-xs">
                     <BriefcaseIcon />
@@ -165,7 +256,6 @@ function HomePage({ setView }) {
                     <p className="text-gray-600 mt-1 text-sm">Compra y vende productos.</p>
                 </div>
             </div>
-
             <div className="mb-12">
                 <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Artículos Recientes</h2>
                 {loading ? <p className="text-center">Cargando...</p> : (
@@ -174,9 +264,7 @@ function HomePage({ setView }) {
                     </div>
                 )}
                 <div className="text-center mt-8">
-                    <button onClick={() => setView({ page: 'listings', type: 'producto' })} className="bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
-                        Ver todos los artículos
-                    </button>
+                    <button onClick={() => setView({ page: 'listings', type: 'producto' })} className="bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">Ver todos los artículos</button>
                 </div>
             </div>
         </div>
@@ -369,7 +457,7 @@ function ListingDetailPage({ listingId, currentUser, navigateToMessages }) {
                         <p><strong>Ubicación:</strong> {listing.location}</p>
                     </div>
                     {currentUser && currentUser.uid !== listing.userId && (
-                        <button onClick={() => navigateToMessages({chatId: [currentUser.uid, listing.userId].sort().join('_'), recipientName: listing.userName, recipientId: listing.userId})} className="w-full mt-6 bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 font-bold transition">Contactar al Vendedor</button>
+                        <button onClick={() => navigateToMessages({recipientId: listing.userId, recipientName: listing.userName, recipientPhotoURL: listing.userPhotoURL})} className="w-full mt-6 bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 font-bold transition">Contactar al Vendedor</button>
                     )}
                 </div>
             </div>
@@ -422,8 +510,9 @@ function ChatPage({ activeChat, setActiveChat, currentUser, setView }) {
         e.preventDefault();
         if (newMessage.trim() === '' || !activeChat || !currentUser) return;
         const chatRef = doc(db, "chats", activeChat.id);
+        const currentMessages = (await getDoc(chatRef)).data().messages || [];
         const messageData = { text: newMessage, sender: currentUser.uid, createdAt: new Date() };
-        await updateDoc(chatRef, { messages: [...messages, messageData], updatedAt: serverTimestamp() });
+        await updateDoc(chatRef, { messages: [...currentMessages, messageData], updatedAt: serverTimestamp() });
         setNewMessage('');
     };
 
