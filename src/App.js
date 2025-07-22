@@ -483,7 +483,7 @@ function AccountSettings({ user, setUser }) {
 function MyListings({ user, setView }) {
     const [myListings, setMyListings] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [showDeleteModal, setShowDeleteModal] = useState(null); // Holds listing to delete
+    const [showDeleteModal, setShowDeleteModal] = useState(null);
 
     useEffect(() => {
         if (!user) return;
@@ -499,7 +499,6 @@ function MyListings({ user, setView }) {
     const handleDelete = async (listingToDelete) => {
         if (!listingToDelete) return;
         try {
-            // Delete photos from Storage
             if (listingToDelete.photos && listingToDelete.photos.length > 0) {
                 const deletePromises = listingToDelete.photos.map(photoURL => {
                     const photoRef = ref(storage, photoURL);
@@ -507,7 +506,6 @@ function MyListings({ user, setView }) {
                 });
                 await Promise.all(deletePromises);
             }
-            // Delete document from Firestore
             await deleteDoc(doc(db, "listings", listingToDelete.id));
             alert("Anuncio eliminado con éxito.");
         } catch (error) {
