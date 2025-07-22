@@ -80,16 +80,16 @@ try { enableIndexedDbPersistence(db, { cacheSizeBytes: CACHE_SIZE_UNLIMITED }); 
 
 // --- ICONOS ---
 const BellIcon = ({ hasNotification }) => ( <div className="relative"><svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>{hasNotification && <span className="absolute top-0 right-0 block h-3 w-3 rounded-full bg-red-500 ring-2 ring-white"></span>}</div>);
-const HomeIcon = ({isActive}) => <svg className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>;
-const MessagesIcon = ({isActive}) => <svg className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>;
-const PlusCircleIcon = () => <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" /></svg>;
-const ListingsIcon = ({isActive}) => <svg className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>;
-const AccountIcon = ({isActive}) => <svg className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
 const BriefcaseIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>);
 const TagIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-5 5a2 2 0 01-2.828 0l-7-7A2 2 0 013 8V3z" /></svg>);
 const ArrowLeftIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" /></svg>;
 const CameraIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
 const SpinnerIcon = () => <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
+const HomeIcon = ({isActive}) => <svg className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>;
+const MessagesIcon = ({isActive}) => <svg className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>;
+const PlusCircleIcon = () => <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" /></svg>;
+const ListingsIcon = ({isActive}) => <svg className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>;
+const AccountIcon = ({isActive}) => <svg className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
 
 // --- COMPONENTE PRINCIPAL ---
 export default function App() {
@@ -370,7 +370,7 @@ function PublishPage({ type, setView, user }) {
                 const uploadPromises = imageFiles.map(file => { const imageRef = ref(storage, `listings/${user.uid}/${Date.now()}_${file.name}`); return uploadBytes(imageRef, file).then(snapshot => getDownloadURL(snapshot.ref)); });
                 photoURLs = await Promise.all(uploadPromises);
             }
-            await addDoc(collection(db, "listings"), { ...formData, type, price: Number(formData.price) || 0, location, photos: photoURLs, userId: user.uid, userName: user.displayName, createdAt: serverTimestamp(), });
+            await addDoc(collection(db, "listings"), { ...formData, type, price: Number(formData.price) || 0, location, photos: photoURLs, userId: user.uid, userName: user.displayName, userPhotoURL: user.photoURL, createdAt: serverTimestamp(), });
             alert("¡Anuncio publicado con éxito!");
             setView({ page: 'listings', type: type });
         } catch (error) { console.error("Error al publicar:", error); alert("Hubo un error al publicar tu anuncio."); } 
@@ -404,7 +404,65 @@ function PublishPage({ type, setView, user }) {
 }
 
 function ProfilePage({ user, setUser, setView }) { if (!user) return <p>Cargando perfil...</p>; const menuItems = [ { label: "Ajustes de Cuenta", view: "accountSettings" }, { label: "Mis Ventas", view: "myListings" }, ]; return ( <div className="container mx-auto max-w-2xl"><div className="bg-white p-8 rounded-lg shadow-lg text-center"><img src={user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`} alt="Perfil" className="w-24 h-24 rounded-full mx-auto mb-4" /><h2 className="text-2xl font-bold">{user.displayName}</h2><p className="text-gray-500">{user.email}</p></div><div className="bg-white p-4 rounded-lg shadow-lg mt-6"><ul className="divide-y divide-gray-200">{menuItems.map(item => ( <li key={item.view} onClick={() => setView({ page: item.view })} className="p-4 hover:bg-gray-50 cursor-pointer flex justify-between items-center"><span>{item.label}</span><span>&rarr;</span></li> ))}</ul></div></div> ); }
-function AccountSettings({ user, setUser }) { const [displayName, setDisplayName] = useState(user?.displayName || ''); const [isSaving, setIsSaving] = useState(false); const handleSave = async (e) => { e.preventDefault(); setIsSaving(true); try { await updateProfile(auth.currentUser, { displayName }); const userDocRef = doc(db, "users", user.uid); await updateDoc(userDocRef, { displayName }); setUser(prev => ({...prev, displayName})); alert("Perfil actualizado con éxito."); } catch (error) { console.error("Error al actualizar perfil:", error); alert("Hubo un error al actualizar tu perfil."); } setIsSaving(false); }; return ( <div className="bg-white p-8 rounded-lg shadow-lg max-w-2xl mx-auto"><h2 className="text-2xl font-bold mb-6">Ajustes de Cuenta</h2><form onSubmit={handleSave} className="space-y-4"><div><label className="block text-sm font-medium text-gray-700">Nombre de Usuario</label><input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required /></div><div className="flex justify-end"><button type="submit" disabled={isSaving} className="bg-blue-600 text-white px-4 py-2 rounded-lg disabled:bg-blue-300">{isSaving ? 'Guardando...' : 'Guardar Cambios'}</button></div></form></div> ); }
+
+function AccountSettings({ user, setUser }) {
+    const [displayName, setDisplayName] = useState(user?.displayName || '');
+    const [isSaving, setIsSaving] = useState(false);
+    const [photoFile, setPhotoFile] = useState(null);
+    const [photoPreview, setPhotoPreview] = useState(user?.photoURL || '');
+    const fileInputRef = useRef(null);
+
+    const handlePhotoChange = (e) => {
+        if (e.target.files[0]) {
+            setPhotoFile(e.target.files[0]);
+            setPhotoPreview(URL.createObjectURL(e.target.files[0]));
+        }
+    };
+
+    const handleSave = async (e) => {
+        e.preventDefault();
+        setIsSaving(true);
+        try {
+            let newPhotoURL = user.photoURL;
+            if (photoFile) {
+                const photoRef = ref(storage, `profile-pictures/${user.uid}`);
+                await uploadBytes(photoRef, photoFile);
+                newPhotoURL = await getDownloadURL(photoRef);
+            }
+
+            await updateProfile(auth.currentUser, { displayName, photoURL: newPhotoURL });
+            const userDocRef = doc(db, "users", user.uid);
+            await updateDoc(userDocRef, { displayName, photoURL: newPhotoURL });
+            setUser(prev => ({...prev, displayName, photoURL: newPhotoURL}));
+            alert("Perfil actualizado con éxito.");
+        } catch (error) {
+            console.error("Error al actualizar perfil:", error);
+            alert("Hubo un error al actualizar tu perfil.");
+        }
+        setIsSaving(false);
+    };
+
+    return (
+        <div className="bg-white p-8 rounded-lg shadow-lg max-w-2xl mx-auto">
+            <h2 className="text-2xl font-bold mb-6">Ajustes de Cuenta</h2>
+            <form onSubmit={handleSave} className="space-y-6">
+                <div className="flex flex-col items-center">
+                    <img src={photoPreview || `https://i.pravatar.cc/150?u=${user?.uid}`} alt="Perfil" className="w-24 h-24 rounded-full mb-4 cursor-pointer" onClick={() => fileInputRef.current.click()} />
+                    <input type="file" ref={fileInputRef} onChange={handlePhotoChange} className="hidden" accept="image/*" />
+                    <button type="button" onClick={() => fileInputRef.current.click()} className="text-sm text-blue-600 hover:underline">Cambiar foto</button>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700">Nombre de Usuario</label>
+                    <input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required />
+                </div>
+                <div className="flex justify-end">
+                    <button type="submit" disabled={isSaving} className="bg-blue-600 text-white px-4 py-2 rounded-lg disabled:bg-blue-300 flex items-center">{isSaving && <SpinnerIcon />}{isSaving ? 'Guardando...' : 'Guardar Cambios'}</button>
+                </div>
+            </form>
+        </div>
+    );
+}
+
 function MyListings({ user, setView }) { const [myListings, setMyListings] = useState([]); const [loading, setLoading] = useState(true); useEffect(() => { if (!user) return; const q = query(collection(db, "listings"), where("userId", "==", user.uid), orderBy("createdAt", "desc")); const unsubscribe = onSnapshot(q, (snapshot) => { const listingsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); setMyListings(listingsData); setLoading(false); }); return () => unsubscribe(); }, [user]); return ( <div className="bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto"><h2 className="text-2xl font-bold mb-6">Mis Ventas</h2>{loading && <p>Cargando tus anuncios...</p>}{!loading && myListings.length === 0 && <p>No has publicado ningún anuncio todavía.</p>}<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">{myListings.map(listing => ( <div key={listing.id} className="border rounded-lg p-2"><img src={listing.photos?.[0]} className="w-full h-32 object-cover rounded-md" /><h3 className="font-semibold truncate mt-2">{listing.title}</h3></div> ))}</div></div> ); }
 
 // --- NUEVOS COMPONENTES DE DETALLES Y CHAT ---
@@ -433,6 +491,8 @@ function ListingDetailPage({ listingId, currentUser, navigateToMessages }) {
 
     if (loading) return <p className="text-center">Cargando anuncio...</p>;
     if (!listing) return <p className="text-center">Anuncio no encontrado.</p>;
+    
+    const publisherLabel = listing.type === 'empleo' ? 'Contratista' : 'Vendedor';
 
     return (
         <div className="bg-white p-4 sm:p-8 rounded-lg shadow-lg max-w-4xl mx-auto">
@@ -453,12 +513,12 @@ function ListingDetailPage({ listingId, currentUser, navigateToMessages }) {
                     <p className="text-3xl font-bold text-blue-600 mb-4">{listing.price ? `C$ ${listing.price}` : 'Precio a Consultar'}</p>
                     <p className="text-gray-600 mb-4 whitespace-pre-wrap">{listing.description || "El vendedor no agregó una descripción."}</p>
                     <div className="border-t pt-4">
-                        <h3 className="font-semibold text-lg mb-2">Información del Vendedor</h3>
+                        <h3 className="font-semibold text-lg mb-2">Información del {publisherLabel}</h3>
                         <p><strong>Nombre:</strong> {listing.userName}</p>
                         <p><strong>Ubicación:</strong> {listing.location}</p>
                     </div>
                     {currentUser && currentUser.uid !== listing.userId && (
-                        <button onClick={() => navigateToMessages({recipientId: listing.userId, recipientName: listing.userName, recipientPhotoURL: listing.userPhotoURL})} className="w-full mt-6 bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 font-bold transition">Contactar al Vendedor</button>
+                        <button onClick={() => navigateToMessages({recipientId: listing.userId, recipientName: listing.userName, recipientPhotoURL: listing.userPhotoURL})} className="w-full mt-6 bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 font-bold transition">Contactar al {publisherLabel}</button>
                     )}
                 </div>
             </div>
