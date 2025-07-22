@@ -24,14 +24,17 @@ import {
     CACHE_SIZE_UNLIMITED,
     limit,
     startAfter,
-    getDocs
+    getDocs,
+    deleteDoc
 } from 'firebase/firestore';
 import {
     getStorage,
     ref,
     uploadBytes,
-    getDownloadURL
+    getDownloadURL,
+    deleteObject
 } from 'firebase/storage';
+import imageCompression from 'browser-image-compression';
 
 // --- LISTA COMPLETA DE CIUDADES DE NICARAGUA ---
 const nicaraguaCities = [
@@ -80,7 +83,7 @@ try { enableIndexedDbPersistence(db, { cacheSizeBytes: CACHE_SIZE_UNLIMITED }); 
 
 // --- ICONOS ---
 const BellIcon = ({ hasNotification }) => ( <div className="relative"><svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>{hasNotification && <span className="absolute top-0 right-0 block h-3 w-3 rounded-full bg-red-500 ring-2 ring-white"></span>}</div>);
-const BriefcaseIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>);
+const BriefcaseIcon = ({className}) => (<svg xmlns="http://www.w3.org/2000/svg" className={className || "h-12 w-12 text-blue-500"} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>);
 const TagIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-5 5a2 2 0 01-2.828 0l-7-7A2 2 0 013 8V3z" /></svg>);
 const ArrowLeftIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" /></svg>;
 const CameraIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
@@ -343,12 +346,26 @@ function PublishPage({ type, setView, user }) {
     const [previews, setPreviews] = useState([]);
     const categories = type === 'producto' ? productCategories : jobCategories;
 
-    const handleImageChange = (e) => {
+    const handleImageChange = async (e) => {
         if (e.target.files) {
             const filesArray = Array.from(e.target.files);
-            if (imageFiles.length + filesArray.length > 12) { alert("No puedes subir más de 12 fotos."); return; }
-            setImageFiles(prev => [...prev, ...filesArray]);
-            const newPreviews = filesArray.map(file => URL.createObjectURL(file));
+            if (imageFiles.length + filesArray.length > 12) {
+                alert("No puedes subir más de 12 fotos.");
+                return;
+            }
+
+            const options = {
+                maxSizeMB: 0.5,
+                maxWidthOrHeight: 1024,
+                useWebWorker: true
+            };
+
+            const compressedFiles = await Promise.all(
+                filesArray.map(file => imageCompression(file, options))
+            );
+
+            setImageFiles(prev => [...prev, ...compressedFiles]);
+            const newPreviews = compressedFiles.map(file => URL.createObjectURL(file));
             setPreviews(prev => [...prev, ...newPreviews]);
         }
     };
@@ -403,7 +420,7 @@ function PublishPage({ type, setView, user }) {
     );
 }
 
-function ProfilePage({ user, setUser, setView }) { if (!user) return <p>Cargando perfil...</p>; const menuItems = [ { label: "Ajustes de Cuenta", view: "accountSettings" }, { label: "Mis Ventas", view: "myListings" }, ]; return ( <div className="container mx-auto max-w-2xl"><div className="bg-white p-8 rounded-lg shadow-lg text-center"><img src={user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`} alt="Perfil" className="w-24 h-24 rounded-full mx-auto mb-4" /><h2 className="text-2xl font-bold">{user.displayName}</h2><p className="text-gray-500">{user.email}</p></div><div className="bg-white p-4 rounded-lg shadow-lg mt-6"><ul className="divide-y divide-gray-200">{menuItems.map(item => ( <li key={item.view} onClick={() => setView({ page: item.view })} className="p-4 hover:bg-gray-50 cursor-pointer flex justify-between items-center"><span>{item.label}</span><span>&rarr;</span></li> ))}</ul></div></div> ); }
+function ProfilePage({ user, setUser, setView }) { if (!user) return <p>Cargando perfil...</p>; const menuItems = [ { label: "Ajustes de Cuenta", view: "accountSettings" }, { label: "Mis Anuncios", view: "myListings" }, ]; return ( <div className="container mx-auto max-w-2xl"><div className="bg-white p-8 rounded-lg shadow-lg text-center"><img src={user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`} alt="Perfil" className="w-24 h-24 rounded-full mx-auto mb-4" /><h2 className="text-2xl font-bold">{user.displayName}</h2><p className="text-gray-500">{user.email}</p></div><div className="bg-white p-4 rounded-lg shadow-lg mt-6"><ul className="divide-y divide-gray-200">{menuItems.map(item => ( <li key={item.view} onClick={() => setView({ page: item.view })} className="p-4 hover:bg-gray-50 cursor-pointer flex justify-between items-center"><span>{item.label}</span><span>&rarr;</span></li> ))}</ul></div></div> ); }
 
 function AccountSettings({ user, setUser }) {
     const [displayName, setDisplayName] = useState(user?.displayName || '');
@@ -463,7 +480,87 @@ function AccountSettings({ user, setUser }) {
     );
 }
 
-function MyListings({ user, setView }) { const [myListings, setMyListings] = useState([]); const [loading, setLoading] = useState(true); useEffect(() => { if (!user) return; const q = query(collection(db, "listings"), where("userId", "==", user.uid), orderBy("createdAt", "desc")); const unsubscribe = onSnapshot(q, (snapshot) => { const listingsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); setMyListings(listingsData); setLoading(false); }); return () => unsubscribe(); }, [user]); return ( <div className="bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto"><h2 className="text-2xl font-bold mb-6">Mis Ventas</h2>{loading && <p>Cargando tus anuncios...</p>}{!loading && myListings.length === 0 && <p>No has publicado ningún anuncio todavía.</p>}<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">{myListings.map(listing => ( <div key={listing.id} className="border rounded-lg p-2"><img src={listing.photos?.[0]} className="w-full h-32 object-cover rounded-md" /><h3 className="font-semibold truncate mt-2">{listing.title}</h3></div> ))}</div></div> ); }
+function MyListings({ user, setView }) {
+    const [myListings, setMyListings] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [showDeleteModal, setShowDeleteModal] = useState(null); // Holds listing to delete
+
+    useEffect(() => {
+        if (!user) return;
+        const q = query(collection(db, "listings"), where("userId", "==", user.uid), orderBy("createdAt", "desc"));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const listingsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setMyListings(listingsData);
+            setLoading(false);
+        });
+        return () => unsubscribe();
+    }, [user]);
+
+    const handleDelete = async (listingToDelete) => {
+        if (!listingToDelete) return;
+        try {
+            // Delete photos from Storage
+            if (listingToDelete.photos && listingToDelete.photos.length > 0) {
+                const deletePromises = listingToDelete.photos.map(photoURL => {
+                    const photoRef = ref(storage, photoURL);
+                    return deleteObject(photoRef);
+                });
+                await Promise.all(deletePromises);
+            }
+            // Delete document from Firestore
+            await deleteDoc(doc(db, "listings", listingToDelete.id));
+            alert("Anuncio eliminado con éxito.");
+        } catch (error) {
+            console.error("Error eliminando el anuncio: ", error);
+            alert("Hubo un error al eliminar el anuncio.");
+        } finally {
+            setShowDeleteModal(null);
+        }
+    };
+
+    return (
+        <>
+            <div className="bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto">
+                <h2 className="text-2xl font-bold mb-6">Mis Anuncios</h2>
+                {loading && <p>Cargando tus anuncios...</p>}
+                {!loading && myListings.length === 0 && <p>No has publicado ningún anuncio todavía.</p>}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {myListings.map(listing => (
+                        <div key={listing.id} className="border rounded-lg p-2 flex flex-col justify-between">
+                            <div>
+                                <img src={listing.photos?.[0] || `https://placehold.co/600x400/?text=${listing.type}`} className="w-full h-32 object-cover rounded-md" />
+                                <h3 className="font-semibold truncate mt-2">{listing.title}</h3>
+                            </div>
+                            <button onClick={() => setShowDeleteModal(listing)} className="mt-2 w-full bg-red-500 text-white text-sm font-semibold py-1 rounded-md hover:bg-red-600">Eliminar</button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+            {showDeleteModal && (
+                <ConfirmationModal 
+                    message="¿Estás seguro de que quieres eliminar este anuncio? Esta acción no se puede deshacer."
+                    onConfirm={() => handleDelete(showDeleteModal)}
+                    onCancel={() => setShowDeleteModal(null)}
+                />
+            )}
+        </>
+    );
+}
+
+function ConfirmationModal({ message, onConfirm, onCancel }) {
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-sm mx-4">
+                <p className="text-lg mb-4">{message}</p>
+                <div className="flex justify-end gap-4">
+                    <button onClick={onCancel} className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300">Cancelar</button>
+                    <button onClick={onConfirm} className="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 
 // --- NUEVOS COMPONENTES DE DETALLES Y CHAT ---
 
@@ -498,12 +595,20 @@ function ListingDetailPage({ listingId, currentUser, navigateToMessages }) {
         <div className="bg-white p-4 sm:p-8 rounded-lg shadow-lg max-w-4xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
-                    <img src={mainImage || 'https://placehold.co/600x400'} alt={listing.title} className="w-full h-80 object-cover rounded-lg mb-4" />
-                    {listing.photos && listing.photos.length > 1 && (
-                        <div className="flex space-x-2 overflow-x-auto">
-                            {listing.photos.map((photo, index) => (
-                                <img key={index} src={photo} onClick={() => setMainImage(photo)} className={`h-20 w-20 object-cover rounded-md cursor-pointer ${mainImage === photo ? 'border-2 border-blue-500' : ''}`} />
-                            ))}
+                    {listing.type === 'producto' ? (
+                        <>
+                            <img src={mainImage || 'https://placehold.co/600x400'} alt={listing.title} className="w-full h-80 object-cover rounded-lg mb-4" />
+                            {listing.photos && listing.photos.length > 1 && (
+                                <div className="flex space-x-2 overflow-x-auto">
+                                    {listing.photos.map((photo, index) => (
+                                        <img key={index} src={photo} onClick={() => setMainImage(photo)} className={`h-20 w-20 object-cover rounded-md cursor-pointer ${mainImage === photo ? 'border-2 border-blue-500' : ''}`} />
+                                    ))}
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        <div className="w-full h-80 bg-gray-100 rounded-lg flex items-center justify-center">
+                           <BriefcaseIcon className="h-32 w-32 text-gray-400" />
                         </div>
                     )}
                 </div>
