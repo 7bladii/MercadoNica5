@@ -382,6 +382,14 @@ function ChatPage({ activeChat, setActiveChat, currentUser, setView }) {
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const messagesEndRef = useRef(null);
+    const textareaRef = useRef(null);
+
+    useEffect(() => {
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+        }
+    }, [newMessage]);
 
     useEffect(() => {
         if (!currentUser) return;
@@ -421,9 +429,9 @@ function ChatPage({ activeChat, setActiveChat, currentUser, setView }) {
 
     return (
         <div className="flex h-[75vh] bg-white rounded-lg shadow-lg">
-            <div className="w-1/3 border-r">
+            <div className={`w-full md:w-1/3 border-r ${activeChat && 'hidden md:block'}`}>
                 <div className="p-4 border-b"><h2 className="text-xl font-bold">Conversaciones</h2></div>
-                <ul className="overflow-y-auto">
+                <ul className="overflow-y-auto h-[calc(75vh-65px)]">
                     {conversations.map(convo => (
                         <li key={convo.id} onClick={() => setActiveChat(convo)} className={`p-4 cursor-pointer hover:bg-gray-100 ${activeChat?.id === convo.id ? 'bg-blue-100' : ''}`}>
                             <p className="font-semibold">{convo.recipientInfo?.displayName}</p>
@@ -431,25 +439,28 @@ function ChatPage({ activeChat, setActiveChat, currentUser, setView }) {
                     ))}
                 </ul>
             </div>
-            <div className="w-2/3 flex flex-col">
+            <div className={`w-full md:w-2/3 flex flex-col ${!activeChat && 'hidden md:flex'}`}>
                 {activeChat ? (
                     <>
-                        <div className="p-4 border-b"><h2 className="text-xl font-bold">Chat con {activeChat.recipientInfo?.displayName}</h2></div>
+                        <div className="p-4 border-b flex items-center">
+                            <button onClick={() => setActiveChat(null)} className="md:hidden mr-4 text-blue-600">&larr;</button>
+                            <h2 className="text-xl font-bold">Chat con {activeChat.recipientInfo?.displayName}</h2>
+                        </div>
                         <div className="flex-1 p-4 overflow-y-auto bg-gray-50">
                             {messages.map((msg, index) => (
                                 <div key={index} className={`flex ${msg.sender === currentUser.uid ? 'justify-end' : 'justify-start'} mb-4`}>
                                     <div className={`max-w-xs md:max-w-md p-3 rounded-lg ${msg.sender === currentUser.uid ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}`}>
-                                        <p>{msg.text}</p>
+                                        <p className="whitespace-pre-wrap break-words">{msg.text}</p>
                                         <span className="text-xs opacity-75 mt-1 block text-right">{msg.createdAt?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                     </div>
                                 </div>
                             ))}
                             <div ref={messagesEndRef} />
                         </div>
-                        <div className="p-4 border-t">
-                            <form onSubmit={handleSendMessage} className="flex">
-                                <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Escribe un mensaje..." className="flex-1 border-gray-300 rounded-l-lg p-2" />
-                                <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-r-lg">Enviar</button>
+                        <div className="p-4 border-t bg-white">
+                            <form onSubmit={handleSendMessage} className="flex items-end gap-2">
+                                <textarea ref={textareaRef} value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Escribe un mensaje..." className="flex-1 border-gray-300 rounded-lg p-2 resize-none" rows="1" />
+                                <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg self-end">Enviar</button>
                             </form>
                         </div>
                     </>
