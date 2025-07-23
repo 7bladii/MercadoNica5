@@ -405,6 +405,7 @@ function PublishPage({ type, setView, user, listingId }) {
     const [imageFiles, setImageFiles] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [previews, setPreviews] = useState([]);
+    const [uploadProgress, setUploadProgress] = useState(0);
     const categories = type === 'producto' ? productCategories : jobCategories;
     const isEditing = !!listingId;
 
@@ -454,9 +455,15 @@ function PublishPage({ type, setView, user, listingId }) {
         if (type === 'producto' && previews.length === 0) { alert("Por favor, sube al menos una imagen para el artículo."); return; }
         setIsSubmitting(true);
         try {
-            let photoURLs = previews.filter(p => typeof p === 'string'); // Keep old URLs
+            let photoURLs = previews.filter(p => typeof p === 'string');
             if (imageFiles.length > 0) {
-                const uploadPromises = imageFiles.map(file => { const imageRef = ref(storage, `listings/${user.uid}/${Date.now()}_${file.name}`); return uploadBytes(imageRef, file).then(snapshot => getDownloadURL(snapshot.ref)); });
+                const uploadPromises = imageFiles.map((file, index) => {
+                    const imageRef = ref(storage, `listings/${user.uid}/${Date.now()}_${file.name}`);
+                    return uploadBytes(imageRef, file).then(snapshot => {
+                        setUploadProgress(prev => prev + 1);
+                        return getDownloadURL(snapshot.ref);
+                    });
+                });
                 const newPhotoURLs = await Promise.all(uploadPromises);
                 photoURLs = [...photoURLs, ...newPhotoURLs];
             }
@@ -474,7 +481,7 @@ function PublishPage({ type, setView, user, listingId }) {
                 setView({ page: 'listings', type: type });
             }
         } catch (error) { console.error("Error al publicar:", error); alert("Hubo un error al publicar tu anuncio."); } 
-        finally { setIsSubmitting(false); }
+        finally { setIsSubmitting(false); setUploadProgress(0); }
     };
 
     return (
@@ -497,7 +504,7 @@ function PublishPage({ type, setView, user, listingId }) {
                     </div>
                 )}
 
-                <div className="flex justify-end space-x-4"><button type="button" onClick={() => setView({ page: 'listings', type: type })} className="bg-gray-200 px-4 py-2 rounded-lg">Cancelar</button><button type="submit" disabled={isSubmitting} className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center disabled:bg-blue-300">{isSubmitting && <SpinnerIcon />}{isSubmitting ? (isEditing ? 'Actualizando...' : 'Publicando...') : (isEditing ? 'Actualizar' : 'Publicar')}</button></div>
+                <div className="flex justify-end space-x-4"><button type="button" onClick={() => setView({ page: 'listings', type: type })} className="bg-gray-200 px-4 py-2 rounded-lg">Cancelar</button><button type="submit" disabled={isSubmitting} className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center disabled:bg-blue-300">{isSubmitting && <SpinnerIcon />}{isSubmitting ? `Subiendo ${uploadProgress} de ${imageFiles.length}...` : (isEditing ? 'Actualizar' : 'Publicar')}</button></div>
             </form>
         </div></div>
     );
