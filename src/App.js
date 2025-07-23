@@ -439,10 +439,8 @@ function PublishPage({ type, setView, user, listingId }) {
     const removeImage = (index) => {
         const isUrl = typeof previews[index] === 'string' && previews[index].startsWith('https');
         if (isUrl) {
-            // Si es una URL de Firebase, la eliminamos de previews pero no de imageFiles (que son nuevos)
             setPreviews(prev => prev.filter((_, i) => i !== index));
         } else {
-            // Si es un archivo local, lo eliminamos de ambos
             const fileIndexToRemove = previews.length - imageFiles.length <= index ? index - (previews.length - imageFiles.length) : -1;
             if(fileIndexToRemove > -1) setImageFiles(prev => prev.filter((_, i) => i !== fileIndexToRemove));
             setPreviews(prev => prev.filter((_, i) => i !== index));
