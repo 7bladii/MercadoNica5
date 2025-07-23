@@ -428,7 +428,7 @@ function PublishPage({ type, setView, user, listingId }) {
         if (e.target.files) {
             const filesArray = Array.from(e.target.files);
             if (previews.length + filesArray.length > 12) { alert("No puedes subir más de 12 fotos."); return; }
-            const options = { maxSizeMB: 0.5, maxWidthOrHeight: 1024, useWebWorker: true };
+            const options = { maxSizeMB: 0.2, maxWidthOrHeight: 800, useWebWorker: true };
             const compressedFiles = await Promise.all(filesArray.map(file => imageCompression(file, options)));
             setImageFiles(prev => [...prev, ...compressedFiles]);
             const newPreviews = compressedFiles.map(file => URL.createObjectURL(file));
