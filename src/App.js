@@ -162,30 +162,16 @@ export default function App() {
     };
 
     return ( 
-        <>
-            <style>{`
-                @keyframes gradient-animation {
-                    0% { background-position: 0% 50%; }
-                    50% { background-position: 100% 50%; }
-                    100% { background-position: 0% 50%; }
-                }
-                .animated-gradient {
-                    background: linear-gradient(-45deg, #f0f9ff, #e0f2fe, #f0f9ff, #dbeafe);
-                    background-size: 400% 400%;
-                    animation: gradient-animation 15s ease infinite;
-                }
-            `}</style>
-            <div className="min-h-screen font-sans animated-gradient">
-                <Header user={user} onLogin={handleLogin} onLogout={handleLogout} setView={setView} goHome={goHome} notificationCount={0} />
-                <main className="p-4 md:p-8 container mx-auto pb-24 md:pb-8">
-                    {history.length > 1 && <BackButton onClick={goBack} />}
-                    {renderContent()}
-                </main>
-                {isPublishModalOpen && <PublishModal setView={setView} closeModal={() => setIsPublishModalOpen(false)} />}
-                <BottomNavBar setView={setView} currentView={currentView} openPublishModal={() => setIsPublishModalOpen(true)} goHome={goHome} />
-                <Footer />
-            </div> 
-        </>
+        <div className="min-h-screen font-sans bg-gray-100">
+            <Header user={user} onLogin={handleLogin} onLogout={handleLogout} setView={setView} goHome={goHome} notificationCount={0} />
+            <main className="p-4 md:p-8 container mx-auto pb-24 md:pb-8">
+                {history.length > 1 && <BackButton onClick={goBack} />}
+                {renderContent()}
+            </main>
+            {isPublishModalOpen && <PublishModal setView={setView} closeModal={() => setIsPublishModalOpen(false)} />}
+            <BottomNavBar setView={setView} currentView={currentView} openPublishModal={() => setIsPublishModalOpen(true)} goHome={goHome} />
+            <Footer />
+        </div> 
     );
 }
 
