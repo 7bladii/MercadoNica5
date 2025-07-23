@@ -93,6 +93,7 @@ const MessagesIcon = ({isActive}) => <svg className={`w-6 h-6 ${isActive ? 'text
 const PlusCircleIcon = () => <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" /></svg>;
 const ListingsIcon = ({isActive}) => <svg className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>;
 const AccountIcon = ({isActive}) => <svg className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
+const HeartIcon = ({ isFavorite, ...props }) => <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill={isFavorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5"><path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" /></svg>;
 
 // --- COMPONENTE PRINCIPAL ---
 export default function App() {
@@ -148,13 +149,14 @@ export default function App() {
 
     const renderContent = () => {
         switch (currentView.page) {
-            case 'listings': return <ListingsPage type={currentView.type} setView={setView} />;
+            case 'listings': return <ListingsPage type={currentView.type} setView={setView} user={user} />;
             case 'listingDetail': return <ListingDetailPage listingId={currentView.listingId} currentUser={user} navigateToMessages={navigateToMessages} />;
-            case 'publish': return <PublishPage type={currentView.type} setView={setView} user={user} />;
+            case 'publish': return <PublishPage type={currentView.type} setView={setView} user={user} listingId={currentView.listingId} />;
             case 'messages': return <ChatPage activeChat={activeChat} setActiveChat={setActiveChat} currentUser={user} setView={setView} />;
             case 'profile': return <ProfilePage user={user} setUser={setUser} setView={setView} />;
             case 'accountSettings': return <AccountSettings user={user} setUser={setUser} />;
             case 'myListings': return <MyListings user={user} setView={setView} />;
+            case 'favorites': return <FavoritesPage user={user} setView={setView} />;
             default: return <HomePage setView={setView} />;
         }
     };
@@ -264,7 +266,7 @@ function HomePage({ setView }) {
                 <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Artículos Recientes</h2>
                 {loading ? <p className="text-center">Cargando...</p> : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {recentListings.map(listing => <ListingCard key={listing.id} listing={listing} setView={setView} />)}
+                        {recentListings.map(listing => <ListingCard key={listing.id} listing={listing} setView={setView} user={null} />)}
                     </div>
                 )}
                 <div className="text-center mt-8">
@@ -275,7 +277,7 @@ function HomePage({ setView }) {
     );
 }
 
-function ListingsPage({ type, setView }) {
+function ListingsPage({ type, setView, user }) {
     const [allListings, setAllListings] = useState([]);
     const [filteredListings, setFilteredListings] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -284,7 +286,7 @@ function ListingsPage({ type, setView }) {
 
     useEffect(() => {
         setLoading(true);
-        const q = query(collection(db, "listings"), where("type", "==", type), orderBy("createdAt", "desc"));
+        const q = query(collection(db, "listings"), where("type", "==", type), where("status", "==", "active"), orderBy("createdAt", "desc"));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const listingsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setAllListings(listingsData);
@@ -314,20 +316,79 @@ function ListingsPage({ type, setView }) {
                 </div>
                 <button onClick={() => setView({ page: 'publish', type: type })} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 w-full md:w-auto">Publicar</button>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {loading ? <p>Cargando...</p> : filteredListings.map(listing => <ListingCard key={listing.id} listing={listing} setView={setView} />)}
-            </div>
-            {!loading && filteredListings.length === 0 && <p className="text-center text-gray-500 mt-8">No se encontraron anuncios que coincidan con tu búsqueda.</p>}
+            {loading ? <ListingsSkeleton /> : (
+                <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                        {filteredListings.map(listing => <ListingCard key={listing.id} listing={listing} setView={setView} user={user} />)}
+                    </div>
+                    {!loading && filteredListings.length === 0 && <p className="text-center text-gray-500 mt-8">No se encontraron anuncios que coincidan con tu búsqueda.</p>}
+                </>
+            )}
         </div>
     );
 }
 
-function ListingCard({ listing, setView }) {
+function ListingsSkeleton() {
+    return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
+        </div>
+    );
+}
+
+function SkeletonCard() {
+    return (
+        <div className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse">
+            <div className="w-full h-48 bg-gray-300"></div>
+            <div className="p-4 space-y-3">
+                <div className="h-4 bg-gray-300 rounded w-1/3"></div>
+                <div className="h-6 bg-gray-300 rounded w-full"></div>
+                <div className="h-4 bg-gray-300 rounded w-1/2"></div>
+                <div className="h-8 bg-gray-300 rounded w-1/3"></div>
+            </div>
+        </div>
+    );
+}
+
+function ListingCard({ listing, setView, user }) {
     const placeholderUrl = `https://placehold.co/600x400/e2e8f0/64748b?text=${listing.type === 'empleo' ? 'Empleo' : 'Imagen'}`;
+    const [isFavorite, setIsFavorite] = useState(false);
+
+    useEffect(() => {
+        if (!user) return;
+        const favRef = doc(db, "users", user.uid, "favorites", listing.id);
+        const unsubscribe = onSnapshot(favRef, (doc) => {
+            setIsFavorite(doc.exists());
+        });
+        return () => unsubscribe();
+    }, [user, listing.id]);
+
+    const toggleFavorite = async (e) => {
+        e.stopPropagation(); // Evita que se active el click de la tarjeta
+        if (!user) {
+            alert("Debes iniciar sesión para guardar favoritos.");
+            return;
+        }
+        const favRef = doc(db, "users", user.uid, "favorites", listing.id);
+        if (isFavorite) {
+            await deleteDoc(favRef);
+        } else {
+            await setDoc(favRef, {
+                ...listing, // Guarda una copia de los datos del anuncio
+                addedAt: serverTimestamp()
+            });
+        }
+    };
+
     return (
         <div onClick={() => setView({ page: 'listingDetail', listingId: listing.id })} className="bg-white rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:scale-105 relative cursor-pointer">
             <img src={listing.photos?.[0] || placeholderUrl} alt={listing.title} className="w-full h-48 object-cover" />
-            {listing.photos && listing.photos.length > 1 && ( <div className="absolute top-2 right-2 bg-black bg-opacity-60 text-white text-xs font-bold px-2 py-1 rounded-md flex items-center"><CameraIcon /><span className="ml-1">{listing.photos.length}</span></div> )}
+            {user && (
+                <button onClick={toggleFavorite} className="absolute top-2 right-2 bg-white p-2 rounded-full shadow">
+                    <HeartIcon isFavorite={isFavorite} className={`w-6 h-6 ${isFavorite ? 'text-red-500' : 'text-gray-400'}`} />
+                </button>
+            )}
+            {listing.photos && listing.photos.length > 1 && ( <div className="absolute top-2 left-2 bg-black bg-opacity-60 text-white text-xs font-bold px-2 py-1 rounded-md flex items-center"><CameraIcon /><span className="ml-1">{listing.photos.length}</span></div> )}
             <div className="p-4">
                  <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{listing.category}</span>
                 <h3 className="font-bold text-lg mt-2 truncate">{listing.title}</h3>
@@ -338,32 +399,37 @@ function ListingCard({ listing, setView }) {
     );
 }
 
-function PublishPage({ type, setView, user }) {
+function PublishPage({ type, setView, user, listingId }) {
     const [formData, setFormData] = useState({ title: '', description: '', price: '', category: '' });
     const [location, setLocation] = useState('');
     const [imageFiles, setImageFiles] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [previews, setPreviews] = useState([]);
     const categories = type === 'producto' ? productCategories : jobCategories;
+    const isEditing = !!listingId;
+
+    useEffect(() => {
+        if (isEditing) {
+            const fetchListing = async () => {
+                const docRef = doc(db, "listings", listingId);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    setFormData({ title: data.title, description: data.description, price: data.price, category: data.category });
+                    setLocation(data.location);
+                    setPreviews(data.photos || []);
+                }
+            };
+            fetchListing();
+        }
+    }, [listingId, isEditing]);
 
     const handleImageChange = async (e) => {
         if (e.target.files) {
             const filesArray = Array.from(e.target.files);
-            if (imageFiles.length + filesArray.length > 12) {
-                alert("No puedes subir más de 12 fotos.");
-                return;
-            }
-
-            const options = {
-                maxSizeMB: 0.5,
-                maxWidthOrHeight: 1024,
-                useWebWorker: true
-            };
-
-            const compressedFiles = await Promise.all(
-                filesArray.map(file => imageCompression(file, options))
-            );
-
+            if (previews.length + filesArray.length > 12) { alert("No puedes subir más de 12 fotos."); return; }
+            const options = { maxSizeMB: 0.5, maxWidthOrHeight: 1024, useWebWorker: true };
+            const compressedFiles = await Promise.all(filesArray.map(file => imageCompression(file, options)));
             setImageFiles(prev => [...prev, ...compressedFiles]);
             const newPreviews = compressedFiles.map(file => URL.createObjectURL(file));
             setPreviews(prev => [...prev, ...newPreviews]);
@@ -371,32 +437,51 @@ function PublishPage({ type, setView, user }) {
     };
     
     const removeImage = (index) => {
-        setImageFiles(prev => prev.filter((_, i) => i !== index));
-        setPreviews(prev => prev.filter((_, i) => i !== index));
+        const isUrl = typeof previews[index] === 'string' && previews[index].startsWith('https');
+        if (isUrl) {
+            // Si es una URL de Firebase, la eliminamos de previews pero no de imageFiles (que son nuevos)
+            setPreviews(prev => prev.filter((_, i) => i !== index));
+        } else {
+            // Si es un archivo local, lo eliminamos de ambos
+            const fileIndexToRemove = previews.length - imageFiles.length <= index ? index - (previews.length - imageFiles.length) : -1;
+            if(fileIndexToRemove > -1) setImageFiles(prev => prev.filter((_, i) => i !== fileIndexToRemove));
+            setPreviews(prev => prev.filter((_, i) => i !== index));
+        }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!user) { alert("Debes iniciar sesión."); return; }
         if (!formData.title || !location || !formData.category) { alert("Por favor, completa el título, categoría y ubicación."); return; }
-        if (type === 'producto' && imageFiles.length === 0) { alert("Por favor, sube al menos una imagen para el artículo."); return; }
+        if (type === 'producto' && previews.length === 0) { alert("Por favor, sube al menos una imagen para el artículo."); return; }
         setIsSubmitting(true);
         try {
-            let photoURLs = [];
-            if (type === 'producto' && imageFiles.length > 0) {
+            let photoURLs = previews.filter(p => typeof p === 'string'); // Keep old URLs
+            if (imageFiles.length > 0) {
                 const uploadPromises = imageFiles.map(file => { const imageRef = ref(storage, `listings/${user.uid}/${Date.now()}_${file.name}`); return uploadBytes(imageRef, file).then(snapshot => getDownloadURL(snapshot.ref)); });
-                photoURLs = await Promise.all(uploadPromises);
+                const newPhotoURLs = await Promise.all(uploadPromises);
+                photoURLs = [...photoURLs, ...newPhotoURLs];
             }
-            await addDoc(collection(db, "listings"), { ...formData, type, price: Number(formData.price) || 0, location, photos: photoURLs, userId: user.uid, userName: user.displayName, userPhotoURL: user.photoURL, createdAt: serverTimestamp(), });
-            alert("¡Anuncio publicado con éxito!");
-            setView({ page: 'listings', type: type });
+            
+            const listingData = { ...formData, type, price: Number(formData.price) || 0, location, photos: photoURLs, userId: user.uid, userName: user.displayName, userPhotoURL: user.photoURL, status: 'active', updatedAt: serverTimestamp() };
+
+            if (isEditing) {
+                const docRef = doc(db, "listings", listingId);
+                await updateDoc(docRef, listingData);
+                alert("¡Anuncio actualizado con éxito!");
+                setView({ page: 'myListings' });
+            } else {
+                await addDoc(collection(db, "listings"), { ...listingData, createdAt: serverTimestamp() });
+                alert("¡Anuncio publicado con éxito!");
+                setView({ page: 'listings', type: type });
+            }
         } catch (error) { console.error("Error al publicar:", error); alert("Hubo un error al publicar tu anuncio."); } 
         finally { setIsSubmitting(false); }
     };
 
     return (
         <div className="container mx-auto max-w-2xl"><div className="bg-white p-8 rounded-lg shadow-lg">
-            <h2 className="text-2xl font-bold mb-6 text-center">Publicar Nuevo {type === 'empleo' ? 'Empleo' : 'Artículo'}</h2>
+            <h2 className="text-2xl font-bold mb-6 text-center">{isEditing ? 'Editar' : 'Publicar Nuevo'} {type === 'empleo' ? 'Empleo' : 'Artículo'}</h2>
             <form onSubmit={handleSubmit} className="space-y-6">
                 <input type="text" placeholder="Título del anuncio" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required />
                 <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required><option value="">Selecciona una Categoría</option>{categories.map(c=><option key={c} value={c}>{c}</option>)}</select>
@@ -409,18 +494,18 @@ function PublishPage({ type, setView, user }) {
                         <label className="block text-sm font-medium text-gray-700">Fotografías (hasta 12)</label>
                         <div className="mt-2 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
                             {previews.map((preview, index) => ( <div key={index} className="relative"><img src={preview} alt={`Preview ${index}`} className="h-24 w-24 object-cover rounded-md" /><button type="button" onClick={() => removeImage(index)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold">&times;</button></div> ))}
-                            {imageFiles.length < 12 && ( <label htmlFor="file-upload" className="flex items-center justify-center w-24 h-24 border-2 border-gray-300 border-dashed rounded-md cursor-pointer hover:border-blue-500"><div className="text-center text-gray-500">+<br/>Añadir</div><input id="file-upload" type="file" className="sr-only" onChange={handleImageChange} accept="image/*" multiple /></label> )}
+                            {previews.length < 12 && ( <label htmlFor="file-upload" className="flex items-center justify-center w-24 h-24 border-2 border-gray-300 border-dashed rounded-md cursor-pointer hover:border-blue-500"><div className="text-center text-gray-500">+<br/>Añadir</div><input id="file-upload" type="file" className="sr-only" onChange={handleImageChange} accept="image/*" multiple /></label> )}
                         </div>
                     </div>
                 )}
 
-                <div className="flex justify-end space-x-4"><button type="button" onClick={() => setView({ page: 'listings', type: type })} className="bg-gray-200 px-4 py-2 rounded-lg">Cancelar</button><button type="submit" disabled={isSubmitting} className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center disabled:bg-blue-300">{isSubmitting && <SpinnerIcon />}{isSubmitting ? 'Publicando...' : 'Publicar'}</button></div>
+                <div className="flex justify-end space-x-4"><button type="button" onClick={() => setView({ page: 'listings', type: type })} className="bg-gray-200 px-4 py-2 rounded-lg">Cancelar</button><button type="submit" disabled={isSubmitting} className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center disabled:bg-blue-300">{isSubmitting && <SpinnerIcon />}{isSubmitting ? (isEditing ? 'Actualizando...' : 'Publicando...') : (isEditing ? 'Actualizar' : 'Publicar')}</button></div>
             </form>
         </div></div>
     );
 }
 
-function ProfilePage({ user, setUser, setView }) { if (!user) return <p>Cargando perfil...</p>; const menuItems = [ { label: "Ajustes de Cuenta", view: "accountSettings" }, { label: "Mis Anuncios", view: "myListings" }, ]; return ( <div className="container mx-auto max-w-2xl"><div className="bg-white p-8 rounded-lg shadow-lg text-center"><img src={user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`} alt="Perfil" className="w-24 h-24 rounded-full mx-auto mb-4" /><h2 className="text-2xl font-bold">{user.displayName}</h2><p className="text-gray-500">{user.email}</p></div><div className="bg-white p-4 rounded-lg shadow-lg mt-6"><ul className="divide-y divide-gray-200">{menuItems.map(item => ( <li key={item.view} onClick={() => setView({ page: item.view })} className="p-4 hover:bg-gray-50 cursor-pointer flex justify-between items-center"><span>{item.label}</span><span>&rarr;</span></li> ))}</ul></div></div> ); }
+function ProfilePage({ user, setUser, setView }) { if (!user) return <p>Cargando perfil...</p>; const menuItems = [ { label: "Ajustes de Cuenta", view: "accountSettings" }, { label: "Mis Anuncios", view: "myListings" }, { label: "Mis Favoritos", view: "favorites" } ]; return ( <div className="container mx-auto max-w-2xl"><div className="bg-white p-8 rounded-lg shadow-lg text-center"><img src={user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`} alt="Perfil" className="w-24 h-24 rounded-full mx-auto mb-4" /><h2 className="text-2xl font-bold">{user.displayName}</h2><p className="text-gray-500">{user.email}</p></div><div className="bg-white p-4 rounded-lg shadow-lg mt-6"><ul className="divide-y divide-gray-200">{menuItems.map(item => ( <li key={item.view} onClick={() => setView({ page: item.view })} className="p-4 hover:bg-gray-50 cursor-pointer flex justify-between items-center"><span>{item.label}</span><span>&rarr;</span></li> ))}</ul></div></div> ); }
 
 function AccountSettings({ user, setUser }) {
     const [displayName, setDisplayName] = useState(user?.displayName || '');
@@ -484,6 +569,7 @@ function MyListings({ user, setView }) {
     const [myListings, setMyListings] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showDeleteModal, setShowDeleteModal] = useState(null);
+    const [showSoldModal, setShowSoldModal] = useState(null);
 
     useEffect(() => {
         if (!user) return;
@@ -515,6 +601,20 @@ function MyListings({ user, setView }) {
             setShowDeleteModal(null);
         }
     };
+    
+    const handleMarkAsSold = async (listingToMark) => {
+        if (!listingToMark) return;
+        try {
+            const docRef = doc(db, "listings", listingToMark.id);
+            await updateDoc(docRef, { status: 'sold' });
+            alert("Anuncio marcado como vendido.");
+        } catch (error) {
+            console.error("Error al marcar como vendido: ", error);
+            alert("Hubo un error al actualizar el anuncio.");
+        } finally {
+            setShowSoldModal(null);
+        }
+    };
 
     return (
         <>
@@ -524,12 +624,17 @@ function MyListings({ user, setView }) {
                 {!loading && myListings.length === 0 && <p>No has publicado ningún anuncio todavía.</p>}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                     {myListings.map(listing => (
-                        <div key={listing.id} className="border rounded-lg p-2 flex flex-col justify-between">
+                        <div key={listing.id} className={`border rounded-lg p-2 flex flex-col justify-between ${listing.status === 'sold' ? 'bg-gray-100 opacity-60' : ''}`}>
                             <div>
                                 <img src={listing.photos?.[0] || `https://placehold.co/600x400/?text=${listing.type}`} className="w-full h-32 object-cover rounded-md" />
                                 <h3 className="font-semibold truncate mt-2">{listing.title}</h3>
+                                {listing.status === 'sold' && <p className="text-sm font-bold text-green-600">VENDIDO</p>}
                             </div>
-                            <button onClick={() => setShowDeleteModal(listing)} className="mt-2 w-full bg-red-500 text-white text-sm font-semibold py-1 rounded-md hover:bg-red-600">Eliminar</button>
+                            <div className="flex gap-2 mt-2">
+                                <button onClick={() => setView({ page: 'publish', type: listing.type, listingId: listing.id })} className="w-full bg-blue-500 text-white text-sm font-semibold py-1 rounded-md hover:bg-blue-600">Editar</button>
+                                {listing.status === 'active' && <button onClick={() => setShowSoldModal(listing)} className="w-full bg-green-500 text-white text-sm font-semibold py-1 rounded-md hover:bg-green-600">Vendido</button>}
+                                <button onClick={() => setShowDeleteModal(listing)} className="w-full bg-red-500 text-white text-sm font-semibold py-1 rounded-md hover:bg-red-600">Eliminar</button>
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -541,7 +646,44 @@ function MyListings({ user, setView }) {
                     onCancel={() => setShowDeleteModal(null)}
                 />
             )}
+            {showSoldModal && (
+                <ConfirmationModal 
+                    message="¿Marcar este anuncio como vendido? Ya no será visible en las búsquedas."
+                    onConfirm={() => handleMarkAsSold(showSoldModal)}
+                    onCancel={() => setShowSoldModal(null)}
+                />
+            )}
         </>
+    );
+}
+
+function FavoritesPage({ user, setView }) {
+    const [favorites, setFavorites] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!user) return;
+        const q = query(collection(db, "users", user.uid, "favorites"), orderBy("addedAt", "desc"));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const favsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setFavorites(favsData);
+            setLoading(false);
+        });
+        return () => unsubscribe();
+    }, [user]);
+
+    return (
+        <div className="container mx-auto">
+            <h1 className="text-3xl font-bold mb-8">Mis Favoritos</h1>
+            {loading ? <ListingsSkeleton /> : (
+                <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                        {favorites.map(listing => <ListingCard key={listing.id} listing={listing} setView={setView} user={user} />)}
+                    </div>
+                    {!loading && favorites.length === 0 && <p className="text-center text-gray-500 mt-8">No has guardado ningún anuncio como favorito.</p>}
+                </>
+            )}
+        </div>
     );
 }
 
