@@ -162,22 +162,36 @@ export default function App() {
     };
 
     return ( 
-        <div className="bg-gray-100 min-h-screen font-sans">
-            <Header user={user} onLogin={handleLogin} onLogout={handleLogout} setView={setView} goHome={goHome} notificationCount={0} />
-            <main className="p-4 md:p-8 container mx-auto pb-24 md:pb-8">
-                {history.length > 1 && <BackButton onClick={goBack} />}
-                {renderContent()}
-            </main>
-            {isPublishModalOpen && <PublishModal setView={setView} closeModal={() => setIsPublishModalOpen(false)} />}
-            <BottomNavBar setView={setView} currentView={currentView} openPublishModal={() => setIsPublishModalOpen(true)} goHome={goHome} />
-            <Footer />
-        </div> 
+        <>
+            <style>{`
+                @keyframes gradient-animation {
+                    0% { background-position: 0% 50%; }
+                    50% { background-position: 100% 50%; }
+                    100% { background-position: 0% 50%; }
+                }
+                .animated-gradient {
+                    background: linear-gradient(-45deg, #f0f9ff, #e0f2fe, #f0f9ff, #dbeafe);
+                    background-size: 400% 400%;
+                    animation: gradient-animation 15s ease infinite;
+                }
+            `}</style>
+            <div className="min-h-screen font-sans animated-gradient">
+                <Header user={user} onLogin={handleLogin} onLogout={handleLogout} setView={setView} goHome={goHome} notificationCount={0} />
+                <main className="p-4 md:p-8 container mx-auto pb-24 md:pb-8">
+                    {history.length > 1 && <BackButton onClick={goBack} />}
+                    {renderContent()}
+                </main>
+                {isPublishModalOpen && <PublishModal setView={setView} closeModal={() => setIsPublishModalOpen(false)} />}
+                <BottomNavBar setView={setView} currentView={currentView} openPublishModal={() => setIsPublishModalOpen(true)} goHome={goHome} />
+                <Footer />
+            </div> 
+        </>
     );
 }
 
 function BackButton({ onClick }) { return ( <button onClick={onClick} className="flex items-center text-gray-600 hover:text-gray-900 font-semibold mb-4"><ArrowLeftIcon /> Volver</button> ); }
-function Header({ user, onLogin, onLogout, setView, goHome, notificationCount }) { return ( <header className="bg-white shadow-md sticky top-0 z-50 hidden md:block"><nav className="container mx-auto px-4 py-3 flex justify-between items-center"><div className="flex items-center cursor-pointer" onClick={goHome}><span className="text-2xl font-bold text-blue-600">Mercado<span className="text-sky-500">Nica</span></span></div><div className="flex items-center space-x-4">{user && <div className="cursor-pointer" onClick={() => setView({ page: 'messages' })}><BellIcon hasNotification={notificationCount > 0} /></div>}{user ? (<div className="relative group"><img src={user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`} alt="Perfil" className="w-10 h-10 rounded-full cursor-pointer" /><div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-20 hidden group-hover:block"><span className="block px-4 py-2 text-sm text-gray-700 font-semibold truncate">{user.displayName}</span><a href="#" onClick={() => setView({ page: 'profile' })} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Mi Perfil</a><a href="#" onClick={onLogout} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cerrar Sesión</a></div></div>) : ( <button onClick={onLogin} className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">Iniciar Sesión</button> )}</div></nav></header> ); }
-function Footer() { return ( <footer className="bg-white mt-12 py-6 border-t hidden md:block"><div className="container mx-auto text-center text-gray-600"><p>&copy; {new Date().getFullYear()} MercadoNica. Todos los derechos reservados.</p></div></footer> ); }
+function Header({ user, onLogin, onLogout, setView, goHome, notificationCount }) { return ( <header className="bg-white/80 backdrop-blur-sm shadow-md sticky top-0 z-50 hidden md:block"><nav className="container mx-auto px-4 py-3 flex justify-between items-center"><div className="flex items-center cursor-pointer" onClick={goHome}><span className="text-2xl font-bold text-blue-600">Mercado<span className="text-sky-500">Nica</span></span></div><div className="flex items-center space-x-4">{user && <div className="cursor-pointer" onClick={() => setView({ page: 'messages' })}><BellIcon hasNotification={notificationCount > 0} /></div>}{user ? (<div className="relative group"><img src={user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`} alt="Perfil" className="w-10 h-10 rounded-full cursor-pointer" /><div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-20 hidden group-hover:block"><span className="block px-4 py-2 text-sm text-gray-700 font-semibold truncate">{user.displayName}</span><a href="#" onClick={() => setView({ page: 'profile' })} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Mi Perfil</a><a href="#" onClick={onLogout} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cerrar Sesión</a></div></div>) : ( <button onClick={onLogin} className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">Iniciar Sesión</button> )}</div></nav></header> ); }
+function Footer() { return ( <footer className="bg-white/80 backdrop-blur-sm mt-12 py-6 border-t hidden md:block"><div className="container mx-auto text-center text-gray-600"><p>&copy; {new Date().getFullYear()} MercadoNica. Todos los derechos reservados.</p></div></footer> ); }
 
 function BottomNavBar({ setView, currentView, openPublishModal, goHome }) {
     const navItems = [
@@ -189,7 +203,7 @@ function BottomNavBar({ setView, currentView, openPublishModal, goHome }) {
     ];
 
     return (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50">
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-t shadow-lg z-50">
             <div className="flex justify-around items-center h-16">
                 {navItems.map(item => {
                     const isActive = currentView.page === item.page;
@@ -264,7 +278,7 @@ function HomePage({ setView }) {
             </div>
             <div className="mb-12">
                 <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Artículos Recientes</h2>
-                {loading ? <p className="text-center">Cargando...</p> : (
+                {loading ? <ListingsSkeleton /> : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                         {recentListings.map(listing => <ListingCard key={listing.id} listing={listing} setView={setView} user={null} />)}
                     </div>
