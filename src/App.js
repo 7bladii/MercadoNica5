@@ -457,14 +457,17 @@ function PublishPage({ type, setView, user, listingId }) {
         try {
             let photoURLs = previews.filter(p => typeof p === 'string');
             if (imageFiles.length > 0) {
-                const uploadPromises = imageFiles.map((file, index) => {
+                const uploadPromises = imageFiles.map(file => {
                     const imageRef = ref(storage, `listings/${user.uid}/${Date.now()}_${file.name}`);
                     return uploadBytes(imageRef, file).then(snapshot => {
                         setUploadProgress(prev => prev + 1);
                         return getDownloadURL(snapshot.ref);
                     });
                 });
-                const newPhotoURLs = await Promise.all(uploadPromises);
+                const results = await Promise.allSettled(uploadPromises);
+                const newPhotoURLs = results
+                    .filter(result => result.status === 'fulfilled')
+                    .map(result => result.value);
                 photoURLs = [...photoURLs, ...newPhotoURLs];
             }
             
