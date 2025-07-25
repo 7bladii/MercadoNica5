@@ -422,7 +422,7 @@ function PublishPage({ type, setView, user, listingId }) {
         if (previews.length === 0) { alert("Por favor, sube al menos una imagen para el artículo."); return; }
         setIsSubmitting(true);
         try {
-            let photoURLs = previews.filter(p => typeof p === 'string');
+            let photoURLs = previews.filter(p => typeof p === 'string' && p.startsWith('https'));
             if (imageFiles.length > 0) {
                 const uploadPromises = imageFiles.map(file => {
                     const imageRef = ref(storage, `listings/${user.uid}/${Date.now()}_${file.name}`);
