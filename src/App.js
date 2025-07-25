@@ -67,7 +67,6 @@ const nicaraguaCities = [
 
 // --- CATEGORÍAS PARA PUBLICACIONES ---
 const productCategories = [ "Autos y Vehículos", "Motos", "Bienes Raíces", "Celulares y Tablets", "Computadoras y Laptops", "Electrónicos y Audio", "Videojuegos y Consolas", "Hogar y Muebles", "Electrodomésticos", "Ropa y Accesorios", "Salud y Belleza", "Deportes y Fitness", "Herramientas", "Construcción", "Industria y Oficina", "Mascotas", "Juguetes y Bebés", "Libros y Revistas", "Música y Hobbies", "Otro" ].sort();
-const jobCategories = [ "Administración y Oficina", "Atención al Cliente", "Ventas", "Marketing y Redes Sociales", "Informática y Telecomunicaciones", "Diseño y Creatividad", "Ingeniería", "Construcción y Oficios", "Logística y Transporte", "Salud y Medicina", "Educación", "Gastronomía y Hotelería", "Otro" ].sort();
 
 // --- CONFIGURACIÓN DE FIREBASE ---
 const firebaseConfig = { apiKey: "AIzaSyChYTYsSLFfWsk2UVm6BsldnaGw42AwDC4", authDomain: "mecardonica.firebaseapp.com", projectId: "mecardonica", storageBucket: "mecardonica.appspot.com", messagingSenderId: "980886283273", appId: "1:980886283273:web:17d0586151cc5c96d944d8", measurementId: "G-RRQL5YD0V9" };
@@ -100,7 +99,6 @@ export default function App() {
     const [user, setUser] = useState(null);
     const [history, setHistory] = useState([{ page: 'home' }]);
     const [activeChat, setActiveChat] = useState(null);
-    const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
     const currentView = history[history.length - 1];
     
     const setView = (newView) => setHistory(prev => [...prev, newView]);
@@ -149,9 +147,9 @@ export default function App() {
 
     const renderContent = () => {
         switch (currentView.page) {
-            case 'listings': return <ListingsPage type={currentView.type} setView={setView} user={user} />;
+            case 'listings': return <ListingsPage type='producto' setView={setView} user={user} />;
             case 'listingDetail': return <ListingDetailPage listingId={currentView.listingId} currentUser={user} navigateToMessages={navigateToMessages} />;
-            case 'publish': return <PublishPage type={currentView.type} setView={setView} user={user} listingId={currentView.listingId} />;
+            case 'publish': return <PublishPage type='producto' setView={setView} user={user} listingId={currentView.listingId} />;
             case 'messages': return <ChatPage activeChat={activeChat} setActiveChat={setActiveChat} currentUser={user} setView={setView} />;
             case 'profile': return <ProfilePage user={user} setUser={setUser} setView={setView} />;
             case 'accountSettings': return <AccountSettings user={user} setUser={setUser} />;
@@ -168,8 +166,7 @@ export default function App() {
                 {history.length > 1 && <BackButton onClick={goBack} />}
                 {renderContent()}
             </main>
-            {isPublishModalOpen && <PublishModal setView={setView} closeModal={() => setIsPublishModalOpen(false)} />}
-            <BottomNavBar setView={setView} currentView={currentView} openPublishModal={() => setIsPublishModalOpen(true)} goHome={goHome} />
+            <BottomNavBar setView={setView} currentView={currentView} goHome={goHome} />
             <Footer />
         </div> 
     );
@@ -179,11 +176,11 @@ function BackButton({ onClick }) { return ( <button onClick={onClick} className=
 function Header({ user, onLogin, onLogout, setView, goHome, notificationCount }) { return ( <header className="bg-white/80 backdrop-blur-sm shadow-md sticky top-0 z-50 hidden md:block"><nav className="container mx-auto px-4 py-3 flex justify-between items-center"><div className="flex items-center cursor-pointer" onClick={goHome}><span className="text-2xl font-bold text-blue-600">Mercado<span className="text-sky-500">Nica</span></span></div><div className="flex items-center space-x-4">{user && <div className="cursor-pointer" onClick={() => setView({ page: 'messages' })}><BellIcon hasNotification={notificationCount > 0} /></div>}{user ? (<div className="relative group"><img src={user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`} alt="Perfil" className="w-10 h-10 rounded-full cursor-pointer" /><div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-20 hidden group-hover:block"><span className="block px-4 py-2 text-sm text-gray-700 font-semibold truncate">{user.displayName}</span><a href="#" onClick={() => setView({ page: 'profile' })} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Mi Perfil</a><a href="#" onClick={onLogout} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cerrar Sesión</a></div></div>) : ( <button onClick={onLogin} className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">Iniciar Sesión</button> )}</div></nav></header> ); }
 function Footer() { return ( <footer className="bg-white/80 backdrop-blur-sm mt-12 py-6 border-t hidden md:block"><div className="container mx-auto text-center text-gray-600"><p>&copy; {new Date().getFullYear()} MercadoNica. Todos los derechos reservados.</p></div></footer> ); }
 
-function BottomNavBar({ setView, currentView, openPublishModal, goHome }) {
+function BottomNavBar({ setView, currentView, goHome }) {
     const navItems = [
         { name: 'Inicio', icon: HomeIcon, page: 'home', action: goHome },
         { name: 'Mensajes', icon: MessagesIcon, page: 'messages', action: () => setView({ page: 'messages' }) },
-        { name: 'Publicar', icon: PlusCircleIcon, page: 'publish', action: openPublishModal, isCentral: true },
+        { name: 'Publicar', icon: PlusCircleIcon, page: 'publish', action: () => setView({ page: 'publish', type: 'producto' }), isCentral: true },
         { name: 'Anuncios', icon: ListingsIcon, page: 'myListings', action: () => setView({ page: 'myListings' }) },
         { name: 'Cuenta', icon: AccountIcon, page: 'profile', action: () => setView({ page: 'profile' }) },
     ];
@@ -213,29 +210,12 @@ function BottomNavBar({ setView, currentView, openPublishModal, goHome }) {
     );
 }
 
-function PublishModal({ setView, closeModal }) {
-    const handleSelect = (type) => {
-        setView({ page: 'publish', type });
-        closeModal();
-    };
-
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={closeModal}>
-            <div className="bg-white rounded-lg p-8 space-y-4" onClick={e => e.stopPropagation()}>
-                <h2 className="text-xl font-bold text-center">¿Qué quieres publicar?</h2>
-                <button onClick={() => handleSelect('producto')} className="w-full bg-green-500 text-white py-3 rounded-lg font-semibold">Vender un Artículo</button>
-                <button onClick={() => handleSelect('empleo')} className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold">Publicar un Empleo</button>
-            </div>
-        </div>
-    );
-}
-
 function HomePage({ setView }) {
     const [recentListings, setRecentListings] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const q = query(collection(db, "listings"), where("type", "==", "producto"), orderBy("createdAt", "desc"), limit(4));
+        const q = query(collection(db, "listings"), where("type", "==", "producto"), where("status", "==", "active"), orderBy("createdAt", "desc"), limit(8));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const listingsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setRecentListings(listingsData);
@@ -248,20 +228,9 @@ function HomePage({ setView }) {
         <div className="container mx-auto">
             <div className="bg-white p-6 rounded-lg shadow-lg mb-8 text-center">
                 <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">Bienvenido a MercadoNica</h1>
-                <p className="text-gray-600 text-lg">¿Qué estás buscando hoy?</p>
+                <p className="text-gray-600 text-lg">Compra y vende artículos en tu comunidad</p>
             </div>
-            <div className="flex justify-center gap-6 mb-12">
-                <div onClick={() => setView({ page: 'listings', type: 'empleo' })} className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 cursor-pointer flex flex-col items-center text-center w-full max-w-xs">
-                    <BriefcaseIcon />
-                    <h2 className="text-xl font-bold mt-4 text-gray-800">Empleos</h2>
-                    <p className="text-gray-600 mt-1 text-sm">Encuentra o publica una vacante.</p>
-                </div>
-                <div onClick={() => setView({ page: 'listings', type: 'producto' })} className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 cursor-pointer flex flex-col items-center text-center w-full max-w-xs">
-                    <TagIcon />
-                    <h2 className="text-xl font-bold mt-4 text-gray-800">Artículos</h2>
-                    <p className="text-gray-600 mt-1 text-sm">Compra y vende productos.</p>
-                </div>
-            </div>
+            
             <div className="mb-12">
                 <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Artículos Recientes</h2>
                 {loading ? <ListingsSkeleton /> : (
@@ -270,7 +239,9 @@ function HomePage({ setView }) {
                     </div>
                 )}
                 <div className="text-center mt-8">
-                    <button onClick={() => setView({ page: 'listings', type: 'producto' })} className="bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">Ver todos los artículos</button>
+                    <button onClick={() => setView({ page: 'listings', type: 'producto' })} className="bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
+                        Ver todos los artículos
+                    </button>
                 </div>
             </div>
         </div>
@@ -306,7 +277,7 @@ function ListingsPage({ type, setView, user }) {
     return (
         <div className="container mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-                <h1 className="text-3xl font-bold">{type === 'empleo' ? 'Empleos' : 'Artículos'}</h1>
+                <h1 className="text-3xl font-bold">Artículos en Venta</h1>
                 <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
                     <input type="text" placeholder="Buscar por nombre..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="border-gray-300 rounded-md shadow-sm w-full sm:w-auto" />
                     <select value={selectedCity} onChange={e => setSelectedCity(e.target.value)} className="border-gray-300 rounded-md shadow-sm w-full sm:w-auto">
@@ -314,7 +285,7 @@ function ListingsPage({ type, setView, user }) {
                         {nicaraguaCities.map(city => <option key={city} value={city}>{city}</option>)}
                     </select>
                 </div>
-                <button onClick={() => setView({ page: 'publish', type: type })} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 w-full md:w-auto">Publicar</button>
+                <button onClick={() => setView({ page: 'publish', type: 'producto' })} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 w-full md:w-auto">Publicar</button>
             </div>
             {loading ? <ListingsSkeleton /> : (
                 <>
@@ -351,7 +322,7 @@ function SkeletonCard() {
 }
 
 function ListingCard({ listing, setView, user }) {
-    const placeholderUrl = `https://placehold.co/600x400/e2e8f0/64748b?text=${listing.type === 'empleo' ? 'Empleo' : 'Imagen'}`;
+    const placeholderUrl = `https://placehold.co/600x400/e2e8f0/64748b?text=Imagen`;
     const [isFavorite, setIsFavorite] = useState(false);
 
     useEffect(() => {
@@ -364,19 +335,13 @@ function ListingCard({ listing, setView, user }) {
     }, [user, listing.id]);
 
     const toggleFavorite = async (e) => {
-        e.stopPropagation(); // Evita que se active el click de la tarjeta
-        if (!user) {
-            alert("Debes iniciar sesión para guardar favoritos.");
-            return;
-        }
+        e.stopPropagation();
+        if (!user) { alert("Debes iniciar sesión para guardar favoritos."); return; }
         const favRef = doc(db, "users", user.uid, "favorites", listing.id);
         if (isFavorite) {
             await deleteDoc(favRef);
         } else {
-            await setDoc(favRef, {
-                ...listing, // Guarda una copia de los datos del anuncio
-                addedAt: serverTimestamp()
-            });
+            await setDoc(favRef, { ...listing, addedAt: serverTimestamp() });
         }
     };
 
@@ -406,7 +371,7 @@ function PublishPage({ type, setView, user, listingId }) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [previews, setPreviews] = useState([]);
     const [uploadProgress, setUploadProgress] = useState(0);
-    const categories = type === 'producto' ? productCategories : jobCategories;
+    const categories = productCategories;
     const isEditing = !!listingId;
 
     useEffect(() => {
@@ -452,7 +417,7 @@ function PublishPage({ type, setView, user, listingId }) {
         e.preventDefault();
         if (!user) { alert("Debes iniciar sesión."); return; }
         if (!formData.title || !location || !formData.category) { alert("Por favor, completa el título, categoría y ubicación."); return; }
-        if (type === 'producto' && previews.length === 0) { alert("Por favor, sube al menos una imagen para el artículo."); return; }
+        if (previews.length === 0) { alert("Por favor, sube al menos una imagen para el artículo."); return; }
         setIsSubmitting(true);
         try {
             let photoURLs = previews.filter(p => typeof p === 'string');
@@ -471,7 +436,7 @@ function PublishPage({ type, setView, user, listingId }) {
                 photoURLs = [...photoURLs, ...newPhotoURLs];
             }
             
-            const listingData = { ...formData, type, price: Number(formData.price) || 0, location, photos: photoURLs, userId: user.uid, userName: user.displayName, userPhotoURL: user.photoURL, status: 'active', updatedAt: serverTimestamp() };
+            const listingData = { ...formData, type: 'producto', price: Number(formData.price) || 0, location, photos: photoURLs, userId: user.uid, userName: user.displayName, userPhotoURL: user.photoURL, status: 'active', updatedAt: serverTimestamp() };
 
             if (isEditing) {
                 const docRef = doc(db, "listings", listingId);
@@ -481,7 +446,7 @@ function PublishPage({ type, setView, user, listingId }) {
             } else {
                 await addDoc(collection(db, "listings"), { ...listingData, createdAt: serverTimestamp() });
                 alert("¡Anuncio publicado con éxito!");
-                setView({ page: 'listings', type: type });
+                setView({ page: 'listings', type: 'producto' });
             }
         } catch (error) { console.error("Error al publicar:", error); alert("Hubo un error al publicar tu anuncio."); } 
         finally { setIsSubmitting(false); setUploadProgress(0); }
@@ -489,7 +454,7 @@ function PublishPage({ type, setView, user, listingId }) {
 
     return (
         <div className="container mx-auto max-w-2xl"><div className="bg-white p-8 rounded-lg shadow-lg">
-            <h2 className="text-2xl font-bold mb-6 text-center">{isEditing ? 'Editar' : 'Publicar Nuevo'} {type === 'empleo' ? 'Empleo' : 'Artículo'}</h2>
+            <h2 className="text-2xl font-bold mb-6 text-center">{isEditing ? 'Editar' : 'Publicar Nuevo'} Artículo</h2>
             <form onSubmit={handleSubmit} className="space-y-6">
                 <input type="text" placeholder="Título del anuncio" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required />
                 <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required><option value="">Selecciona una Categoría</option>{categories.map(c=><option key={c} value={c}>{c}</option>)}</select>
@@ -497,17 +462,15 @@ function PublishPage({ type, setView, user, listingId }) {
                 <input type="number" placeholder="Precio (C$) (Opcional)" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
                 <div><select value={location} onChange={e => setLocation(e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required><option value="">Selecciona una Ciudad</option>{nicaraguaCities.map(c=><option key={c} value={c}>{c}</option>)}</select></div>
                 
-                {type === 'producto' && (
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Fotografías (hasta 12)</label>
-                        <div className="mt-2 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
-                            {previews.map((preview, index) => ( <div key={index} className="relative"><img src={preview} alt={`Preview ${index}`} className="h-24 w-24 object-cover rounded-md" /><button type="button" onClick={() => removeImage(index)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold">&times;</button></div> ))}
-                            {previews.length < 12 && ( <label htmlFor="file-upload" className="flex items-center justify-center w-24 h-24 border-2 border-gray-300 border-dashed rounded-md cursor-pointer hover:border-blue-500"><div className="text-center text-gray-500">+<br/>Añadir</div><input id="file-upload" type="file" className="sr-only" onChange={handleImageChange} accept="image/*" multiple /></label> )}
-                        </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700">Fotografías (hasta 12)</label>
+                    <div className="mt-2 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
+                        {previews.map((preview, index) => ( <div key={index} className="relative"><img src={preview} alt={`Preview ${index}`} className="h-24 w-24 object-cover rounded-md" /><button type="button" onClick={() => removeImage(index)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold">&times;</button></div> ))}
+                        {previews.length < 12 && ( <label htmlFor="file-upload" className="flex items-center justify-center w-24 h-24 border-2 border-gray-300 border-dashed rounded-md cursor-pointer hover:border-blue-500"><div className="text-center text-gray-500">+<br/>Añadir</div><input id="file-upload" type="file" className="sr-only" onChange={handleImageChange} accept="image/*" multiple /></label> )}
                     </div>
-                )}
+                </div>
 
-                <div className="flex justify-end space-x-4"><button type="button" onClick={() => setView({ page: 'listings', type: type })} className="bg-gray-200 px-4 py-2 rounded-lg">Cancelar</button><button type="submit" disabled={isSubmitting} className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center disabled:bg-blue-300">{isSubmitting && <SpinnerIcon />}{isSubmitting ? `Subiendo ${uploadProgress} de ${imageFiles.length}...` : (isEditing ? 'Actualizar' : 'Publicar')}</button></div>
+                <div className="flex justify-end space-x-4"><button type="button" onClick={() => setView({ page: 'listings', type: 'producto' })} className="bg-gray-200 px-4 py-2 rounded-lg">Cancelar</button><button type="submit" disabled={isSubmitting} className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center disabled:bg-blue-300">{isSubmitting && <SpinnerIcon />}{isSubmitting ? `Subiendo ${uploadProgress} de ${imageFiles.length}...` : (isEditing ? 'Actualizar' : 'Publicar')}</button></div>
             </form>
         </div></div>
     );
