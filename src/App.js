@@ -67,7 +67,6 @@ const nicaraguaCities = [
 
 // --- CATEGORÍAS PARA PUBLICACIONES ---
 const productCategories = [ "Autos y Vehículos", "Motos", "Bienes Raíces", "Celulares y Tablets", "Computadoras y Laptops", "Electrónicos y Audio", "Videojuegos y Consolas", "Hogar y Muebles", "Electrodomésticos", "Ropa y Accesorios", "Salud y Belleza", "Deportes y Fitness", "Herramientas", "Construcción", "Industria y Oficina", "Mascotas", "Juguetes y Bebés", "Libros y Revistas", "Música y Hobbies", "Otro" ].sort();
-const jobCategories = [ "Administración y Oficina", "Atención al Cliente", "Ventas", "Marketing y Redes Sociales", "Informática y Telecomunicaciones", "Diseño y Creatividad", "Ingeniería", "Construcción y Oficios", "Logística y Transporte", "Salud y Medicina", "Educación", "Gastronomía y Hotelería", "Otro" ].sort();
 
 // --- CONFIGURACIÓN DE FIREBASE ---
 const firebaseConfig = { apiKey: "AIzaSyChYTYsSLFfWsk2UVm6BsldnaGw42AwDC4", authDomain: "mecardonica.firebaseapp.com", projectId: "mecardonica", storageBucket: "mecardonica.appspot.com", messagingSenderId: "980886283273", appId: "1:980886283273:web:17d0586151cc5c96d944d8", measurementId: "G-RRQL5YD0V9" };
@@ -100,7 +99,6 @@ export default function App() {
     const [user, setUser] = useState(null);
     const [history, setHistory] = useState([{ page: 'home' }]);
     const [activeChat, setActiveChat] = useState(null);
-    const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
     const currentView = history[history.length - 1];
     
     const setView = (newView) => setHistory(prev => [...prev, newView]);
@@ -422,7 +420,7 @@ function PublishPage({ type, setView, user, listingId }) {
         if (previews.length === 0) { alert("Por favor, sube al menos una imagen para el artículo."); return; }
         setIsSubmitting(true);
         try {
-            let photoURLs = previews.filter(p => typeof p === 'string' && p.startsWith('https'));
+            let photoURLs = previews.filter(p => typeof p === 'string');
             if (imageFiles.length > 0) {
                 const uploadPromises = imageFiles.map(file => {
                     const imageRef = ref(storage, `listings/${user.uid}/${Date.now()}_${file.name}`);
