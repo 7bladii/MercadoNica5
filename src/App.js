@@ -79,42 +79,48 @@ const ListingsIcon = ({isActive}) => <svg className={`w-6 h-6 ${isActive ? 'text
 const AccountIcon = ({isActive}) => <svg className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
 const HeartIcon = ({ isFavorite, ...props }) => <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill={isFavorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5"><path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" /></svg>;
 
-// --- COMPONENTE PRINCIPAL ---
+// --- COMPONENTE PRINCIPAL (ACTUALIZADO) ---
 export default function App() {
     const [user, setUser] = useState(null);
     const [history, setHistory] = useState([{ page: 'home' }]);
     const [activeChat, setActiveChat] = useState(null);
+    const [authLoading, setAuthLoading] = useState(true);
     const currentView = history[history.length - 1];
-    
-    useEffect(() => {
-        // Reemplaza con tus IDs reales
-        const HOTJAR_SITE_ID = 'YOUR_HOTJAR_SITE_ID'; 
-        const HOTJAR_VERSION = 6;
-        const LOGROCKET_PROJECT_ID = 'your-app/id';
 
-        // Inicializar servicios solo en entorno de producción
-        if (process.env.NODE_ENV === 'production') {
-            hotjar.initialize(HOTJAR_SITE_ID, HOTJAR_VERSION);
-            LogRocket.init(LOGROCKET_PROJECT_ID);
-        }
+    useEffect(() => {
+        // Deshabilitado temporalmente para depuración móvil
+        // const HOTJAR_SITE_ID = 'YOUR_HOTJAR_SITE_ID';
+        // const HOTJAR_VERSION = 6;
+        // const LOGROCKET_PROJECT_ID = 'your-app/id';
+
+        // if (process.env.NODE_ENV === 'production') {
+        //     hotjar.initialize(HOTJAR_SITE_ID, HOTJAR_VERSION);
+        //     LogRocket.init(LOGROCKET_PROJECT_ID);
+        // }
     }, []);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
-                // Identificar usuario en LogRocket
-                if (process.env.NODE_ENV === 'production') {
-                    LogRocket.identify(currentUser.uid, {
-                        name: currentUser.displayName,
-                        email: currentUser.email,
-                    });
-                }
-                
+                // if (process.env.NODE_ENV === 'production') {
+                //     LogRocket.identify(currentUser.uid, {
+                //         name: currentUser.displayName,
+                //         email: currentUser.email,
+                //     });
+                // }
                 const userDocRef = doc(db, "users", currentUser.uid);
                 const userDocSnap = await getDoc(userDocRef);
-                if (userDocSnap.exists()) { setUser({ uid: currentUser.uid, ...userDocSnap.data() }); } 
-                else { await setDoc(userDocRef, { displayName: currentUser.displayName || "Usuario Anónimo", email: currentUser.email, photoURL: currentUser.photoURL, createdAt: serverTimestamp(), plan: "gratuito", isPublic: true }); const newUserDoc = await getDoc(userDocRef); setUser({ uid: currentUser.uid, ...newUserDoc.data() }); }
-            } else { setUser(null); }
+                if (userDocSnap.exists()) {
+                    setUser({ uid: currentUser.uid, ...userDocSnap.data() });
+                } else {
+                    await setDoc(userDocRef, { displayName: currentUser.displayName || "Usuario Anónimo", email: currentUser.email, photoURL: currentUser.photoURL, createdAt: serverTimestamp(), plan: "gratuito", isPublic: true });
+                    const newUserDoc = await getDoc(userDocRef);
+                    setUser({ uid: currentUser.uid, ...newUserDoc.data() });
+                }
+            } else {
+                setUser(null);
+            }
+            setAuthLoading(false);
         });
         return () => unsubscribe();
     }, []);
@@ -122,10 +128,9 @@ export default function App() {
     const setView = (newView) => setHistory(prev => [...prev, newView]);
     const goBack = () => { if (history.length > 1) setHistory(prev => prev.slice(0, -1)); };
     const goHome = () => setHistory([{ page: 'home' }]);
-
     const handleLogin = async () => { try { await signInWithPopup(auth, googleProvider); } catch (error) { console.error("Error al iniciar sesión con Google:", error); } };
     const handleLogout = () => { auth.signOut(); goHome(); };
-    
+
     const navigateToMessages = async (chatInfo) => {
         if (!auth.currentUser) return;
         const chatId = [auth.currentUser.uid, chatInfo.recipientId].sort().join('_');
@@ -142,7 +147,7 @@ export default function App() {
                 messages: [], createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
             });
         }
-        
+
         const finalChatDoc = await getDoc(chatRef);
         const recipientId = finalChatDoc.data().participants.find(p => p !== auth.currentUser.uid);
         const recipientInfo = finalChatDoc.data().participantInfo[recipientId];
@@ -165,7 +170,15 @@ export default function App() {
         }
     };
 
-    return ( 
+    if (authLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-100">
+                <div className="text-xl font-semibold text-gray-700">Cargando aplicación...</div>
+            </div>
+        );
+    }
+
+    return (
         <div className="min-h-screen font-sans bg-gray-100">
             <Header user={user} onLogin={handleLogin} onLogout={handleLogout} setView={setView} goHome={goHome} notificationCount={0} />
             <main className="p-4 md:p-8 container mx-auto pb-24 md:pb-8">
@@ -174,519 +187,23 @@ export default function App() {
             </main>
             <BottomNavBar setView={setView} currentView={currentView} goHome={goHome} />
             <Footer />
-        </div> 
+        </div>
     );
 }
 
+
+// --- RESTO DE COMPONENTES ---
 function BackButton({ onClick }) { return ( <button onClick={onClick} className="flex items-center text-gray-600 hover:text-gray-900 font-semibold mb-4"><ArrowLeftIcon /> Volver</button> ); }
 function Header({ user, onLogin, onLogout, setView, goHome, notificationCount }) { return ( <header className="bg-white/80 backdrop-blur-sm shadow-md sticky top-0 z-50 hidden md:block"><nav className="container mx-auto px-4 py-3 flex justify-between items-center"><div className="flex items-center cursor-pointer" onClick={goHome}><span className="text-2xl font-bold text-blue-600">Mercado<span className="text-sky-500">Nica</span></span></div><div className="flex items-center space-x-4">{user && <div className="cursor-pointer" onClick={() => setView({ page: 'messages' })}><BellIcon hasNotification={notificationCount > 0} /></div>}{user ? (<div className="relative group"><img src={user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`} alt="Perfil" className="w-10 h-10 rounded-full cursor-pointer" /><div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-20 hidden group-hover:block"><span className="block px-4 py-2 text-sm text-gray-700 font-semibold truncate">{user.displayName}</span><a href="#" onClick={() => setView({ page: 'profile' })} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Mi Perfil</a><a href="#" onClick={onLogout} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cerrar Sesión</a></div></div>) : ( <button onClick={onLogin} className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">Iniciar Sesión</button> )}</div></nav></header> ); }
 function Footer() { return ( <footer className="bg-white/80 backdrop-blur-sm mt-12 py-6 border-t hidden md:block"><div className="container mx-auto text-center text-gray-600"><p>&copy; {new Date().getFullYear()} MercadoNica. Todos los derechos reservados.</p></div></footer> ); }
-
-function BottomNavBar({ setView, currentView, goHome }) {
-    const handlePublishClick = () => {
-        setView({ page: 'publish', type: 'producto' })
-    };
-
-    const navItems = [
-        { name: 'Inicio', icon: HomeIcon, page: 'home', action: goHome },
-        { name: 'Mensajes', icon: MessagesIcon, page: 'messages', action: () => setView({ page: 'messages' }) },
-        { name: 'Publicar', icon: PlusCircleIcon, page: 'publish', action: handlePublishClick, isCentral: true },
-        { name: 'Anuncios', icon: ListingsIcon, page: 'myListings', action: () => setView({ page: 'myListings' }) },
-        { name: 'Cuenta', icon: AccountIcon, page: 'profile', action: () => setView({ page: 'profile' }) },
-    ];
-
-    return (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-t shadow-lg z-50">
-            <div className="flex justify-around items-center h-16">
-                {navItems.map(item => {
-                    const isActive = currentView.page === item.page;
-                    const Icon = item.icon;
-                    if (item.isCentral) {
-                        return (
-                            <button key={item.name} onClick={item.action} className="bg-blue-600 rounded-full w-14 h-14 flex items-center justify-center -mt-6 shadow-lg">
-                                <Icon />
-                            </button>
-                        );
-                    }
-                    return (
-                        <button key={item.name} onClick={item.action} className="flex flex-col items-center justify-center text-xs">
-                            <Icon isActive={isActive} />
-                            <span className={`mt-1 ${isActive ? 'text-blue-600' : 'text-gray-500'}`}>{item.name}</span>
-                        </button>
-                    );
-                })}
-            </div>
-        </div>
-    );
-}
-
-function HomePage({ setView }) {
-    return (
-        <div className="container mx-auto">
-            <div className="bg-white p-6 rounded-lg shadow-lg mb-8 text-center">
-                <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">Bienvenido a MercadoNica</h1>
-                <p className="text-gray-600 text-lg">Tu plataforma para comprar, vender y encontrar empleo en Nicaragua.</p>
-            </div>
-
-            <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">¿Qué estás buscando hoy?</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div onClick={() => setView({ page: 'listings', type: 'producto' })} className="bg-white p-8 rounded-lg shadow-lg hover:shadow-xl transition-shadow cursor-pointer flex flex-col items-center text-center">
-                    <TagIcon className="h-16 w-16 text-green-500" />
-                    <h3 className="text-2xl font-bold mt-4">Artículos en Venta</h3>
-                    <p className="text-gray-600 mt-2">Explora miles de productos nuevos y de segunda mano.</p>
-                </div>
-                <div onClick={() => setView({ page: 'listings', type: 'trabajo' })} className="bg-white p-8 rounded-lg shadow-lg hover:shadow-xl transition-shadow cursor-pointer flex flex-col items-center text-center">
-                    <BriefcaseIcon className="h-16 w-16 text-blue-500" />
-                    <h3 className="text-2xl font-bold mt-4">Ofertas de Empleo</h3>
-                    <p className="text-gray-600 mt-2">Encuentra tu próximo trabajo o publica tus vacantes.</p>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-function ListingsPage({ type, setView, user }) {
-    const [allListings, setAllListings] = useState([]);
-    const [filteredListings, setFilteredListings] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [selectedCity, setSelectedCity] = useState('');
-    
-    const pageTitle = type === 'producto' ? 'Artículos en Venta' : 'Ofertas de Empleo';
-    const publishButtonText = type === 'producto' ? 'Vender Artículo' : 'Publicar Empleo';
-
-    useEffect(() => {
-        setLoading(true);
-        const q = query(collection(db, "listings"), where("type", "==", type), where("status", "==", "active"), orderBy("createdAt", "desc"));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const listingsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setAllListings(listingsData);
-            setFilteredListings(listingsData);
-            setLoading(false);
-        }, (error) => { console.error("Error fetching listings:", error); setLoading(false); });
-        return () => unsubscribe();
-    }, [type]);
-
-    useEffect(() => {
-        let result = allListings;
-        if (searchTerm) { result = result.filter(listing => listing.title.toLowerCase().includes(searchTerm.toLowerCase())); }
-        if (selectedCity) { result = result.filter(listing => listing.location === selectedCity); }
-        setFilteredListings(result);
-    }, [searchTerm, selectedCity, allListings]);
-
-    return (
-        <div className="container mx-auto">
-            <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-                <h1 className="text-3xl font-bold">{pageTitle}</h1>
-                <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-                    <input type="text" placeholder="Buscar por título..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="border-gray-300 rounded-md shadow-sm w-full sm:w-auto" />
-                    <select value={selectedCity} onChange={e => setSelectedCity(e.target.value)} className="border-gray-300 rounded-md shadow-sm w-full sm:w-auto">
-                        <option value="">Todas las Ciudades</option>
-                        {nicaraguaCities.map(city => <option key={city} value={city}>{city}</option>)}
-                    </select>
-                </div>
-                <button onClick={() => setView({ page: 'publish', type: type })} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 w-full md:w-auto">{publishButtonText}</button>
-            </div>
-            {loading ? <ListingsSkeleton /> : (
-                <>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                        {filteredListings.map(listing => <ListingCard key={listing.id} listing={listing} setView={setView} user={user} />)}
-                    </div>
-                    {!loading && filteredListings.length === 0 && <p className="text-center text-gray-500 mt-8">No se encontraron anuncios que coincidan con tu búsqueda.</p>}
-                </>
-            )}
-        </div>
-    );
-}
-
-function ListingsSkeleton() {
-    return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
-        </div>
-    );
-}
-
-function SkeletonCard() {
-    return (
-        <div className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse">
-            <div className="w-full h-48 bg-gray-300"></div>
-            <div className="p-4 space-y-3">
-                <div className="h-4 bg-gray-300 rounded w-1/3"></div>
-                <div className="h-6 bg-gray-300 rounded w-full"></div>
-                <div className="h-4 bg-gray-300 rounded w-1/2"></div>
-                <div className="h-8 bg-gray-300 rounded w-1/3"></div>
-            </div>
-        </div>
-    );
-}
-
-function ListingCard({ listing, setView, user }) {
-    const placeholderUrl = `https://placehold.co/400x400/e2e8f0/64748b?text=${listing.type === 'producto' ? 'Producto' : 'Empleo'}`;
-    const [isFavorite, setIsFavorite] = useState(false);
-
-    useEffect(() => {
-        if (!user) return;
-        const favRef = doc(db, "users", user.uid, "favorites", listing.id);
-        const unsubscribe = onSnapshot(favRef, (doc) => {
-            setIsFavorite(doc.exists());
-        });
-        return () => unsubscribe();
-    }, [user, listing.id]);
-
-    const toggleFavorite = async (e) => {
-        e.stopPropagation();
-        if (!user) { alert("Debes iniciar sesión para guardar favoritos."); return; }
-        const favRef = doc(db, "users", user.uid, "favorites", listing.id);
-        if (isFavorite) {
-            await deleteDoc(favRef);
-        } else {
-            await setDoc(favRef, { ...listing, addedAt: serverTimestamp() });
-        }
-    };
-
-    const isJob = listing.type === 'trabajo';
-    const imageUrl = listing.photos?.[0]?.thumb || placeholderUrl;
-
-    return (
-        <div onClick={() => setView({ page: 'listingDetail', listingId: listing.id })} className="bg-white rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:scale-105 relative cursor-pointer flex flex-col">
-            <div className="relative">
-                <img src={imageUrl} alt={listing.title} className="w-full h-48 object-cover" />
-                {user && (
-                    <button onClick={toggleFavorite} className="absolute top-2 right-2 bg-white p-2 rounded-full shadow">
-                        <HeartIcon isFavorite={isFavorite} className={`w-6 h-6 ${isFavorite ? 'text-red-500' : 'text-gray-400'}`} />
-                    </button>
-                )}
-                {listing.photos && listing.photos.length > 1 && ( <div className="absolute top-2 left-2 bg-black bg-opacity-60 text-white text-xs font-bold px-2 py-1 rounded-md flex items-center"><CameraIcon /><span className="ml-1">{listing.photos.length}</span></div> )}
-            </div>
-            <div className="p-4 flex-grow flex flex-col">
-                <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded-full self-start">{listing.category}</span>
-                <h3 className="font-bold text-lg mt-2 truncate flex-grow">{listing.title}</h3>
-                <p className="text-gray-600 text-sm">{listing.location}</p>
-                <div className="mt-auto pt-2">
-                    {isJob ? (
-                        <p className="text-lg font-bold text-blue-600">{listing.salary || 'Salario a convenir'}</p>
-                    ) : (
-                        <p className="text-xl font-bold text-blue-600">{listing.price ? `C$ ${listing.price}` : 'Consultar'}</p>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-}
-
-function PublishPage({ type, setView, user, listingId }) {
-    const isJob = type === 'trabajo';
-    const [formData, setFormData] = useState({ title: '', description: '', category: '', price: '', companyName: '', salary: '' });
-    const [location, setLocation] = useState('');
-    const [newImageFiles, setNewImageFiles] = useState([]);
-    const [existingPhotos, setExistingPhotos] = useState([]);
-
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [errors, setErrors] = useState({});
-    const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
-
-    const categories = isJob ? jobCategories : productCategories;
-    const isEditing = !!listingId;
-
-    useEffect(() => {
-        if (isEditing) {
-            const fetchListing = async () => {
-                const docRef = doc(db, "listings", listingId);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    setFormData({
-                        title: data.title,
-                        description: data.description,
-                        category: data.category,
-                        price: data.price || '',
-                        companyName: data.companyName || '',
-                        salary: data.salary || ''
-                    });
-                    setLocation(data.location);
-                    setExistingPhotos(data.photos || []);
-                }
-            };
-            fetchListing();
-        }
-    }, [listingId, isEditing]);
-
-    const validateForm = () => {
-        const newErrors = {};
-        if (!formData.title.trim()) newErrors.title = "El título es obligatorio.";
-        else if (formData.title.trim().length < 5) newErrors.title = "El título debe tener al menos 5 caracteres.";
-
-        if (!formData.category) newErrors.category = "Debes seleccionar una categoría.";
-        if (!location) newErrors.location = "Debes seleccionar una ubicación.";
-
-        if (!formData.description.trim()) newErrors.description = "La descripción es obligatoria.";
-        else if (formData.description.trim().length < 15) newErrors.description = "La descripción debe ser más detallada (mínimo 15 caracteres).";
-
-        if (!isJob && existingPhotos.length === 0 && newImageFiles.length === 0) newErrors.images = "Debes subir al menos una foto para el artículo.";
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
-    const handleImageChange = (e) => {
-        if (e.target.files) {
-            const filesArray = Array.from(e.target.files);
-            const currentImagesCount = existingPhotos.length + newImageFiles.length;
-            const maxImages = isJob ? 1 : 12;
-
-            if (currentImagesCount + filesArray.length > maxImages) {
-                setErrors(prev => ({ ...prev, images: `No puedes subir más de ${maxImages} ${isJob ? 'logo/foto' : 'fotos'}.` }));
-                return;
-            }
-
-            const validFiles = [];
-            for (const file of filesArray) {
-                if (file.size > 5 * 1024 * 1024) { // 5 MB
-                    setErrors(prev => ({ ...prev, images: `La imagen "${file.name}" es muy grande (máx 5MB).` }));
-                    continue;
-                }
-                if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
-                    setErrors(prev => ({ ...prev, images: `El archivo "${file.name}" no es una imagen válida.` }));
-                    continue;
-                }
-                validFiles.push(file);
-            }
-
-            if (isJob) {
-                setNewImageFiles(validFiles);
-            } else {
-                setNewImageFiles(prev => [...prev, ...validFiles]);
-            }
-            if (errors.images) setErrors(prev => ({ ...prev, images: null }));
-        }
-    };
-
-    const removeNewImage = (index) => {
-        setNewImageFiles(prev => prev.filter((_, i) => i !== index));
-    };
-
-    const removeExistingImage = (index) => {
-        setExistingPhotos(prev => prev.filter((_, i) => i !== index));
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!user) { setErrors({ form: "Debes iniciar sesión para publicar." }); return; }
-        if (!validateForm()) return;
-
-        setIsSubmitting(true);
-        setErrors({});
-
-        try {
-            const uploadAndGetURLs = async (file) => {
-                const timestamp = Date.now();
-                const randomId = Math.random().toString(36).substring(2, 8);
-                const baseName = `${user.uid}/${timestamp}_${randomId}_${file.name}`;
-
-                const fullImg = await imageCompression(file, { maxSizeMB: 0.8, maxWidthOrHeight: 1024 });
-                const fullImgRef = ref(storage, `listings/${baseName}_full.jpg`);
-                await uploadBytes(fullImgRef, fullImg);
-                const fullUrl = await getDownloadURL(fullImgRef);
-
-                const thumbImg = await imageCompression(file, { maxSizeMB: 0.1, maxWidthOrHeight: 400 });
-                const thumbImgRef = ref(storage, `listings/${baseName}_thumb.jpg`);
-                await uploadBytes(thumbImgRef, thumbImg);
-                const thumbUrl = await getDownloadURL(thumbImgRef);
-
-                return { full: fullUrl, thumb: thumbUrl };
-            };
-
-            setUploadProgress({ current: 0, total: newImageFiles.length });
-
-            const newPhotoObjects = [];
-            for (let i = 0; i < newImageFiles.length; i++) {
-                const file = newImageFiles[i];
-                const urls = await uploadAndGetURLs(file);
-                newPhotoObjects.push(urls);
-                setUploadProgress({ current: i + 1, total: newImageFiles.length });
-            }
-
-            const allPhotos = [...existingPhotos, ...newPhotoObjects];
-
-            const commonData = {
-                title: formData.title,
-                description: formData.description,
-                category: formData.category,
-                location,
-                type,
-                userId: user.uid,
-                userName: user.displayName,
-                userPhotoURL: user.photoURL,
-                status: 'active',
-                updatedAt: serverTimestamp()
-            };
-            const listingData = isJob
-                ? { ...commonData, companyName: formData.companyName, salary: formData.salary, photos: allPhotos }
-                : { ...commonData, price: Number(formData.price) || 0, photos: allPhotos };
-
-            if (isEditing) {
-                const docRef = doc(db, "listings", listingId);
-                await updateDoc(docRef, listingData);
-            } else {
-                const newDocRef = await addDoc(collection(db, "listings"), { ...listingData, createdAt: serverTimestamp() });
-                logEvent(analytics, 'publish_listing', {
-                    user_id: user.uid,
-                    listing_id: newDocRef.id,
-                    listing_type: type,
-                    category: listingData.category,
-                    location: listingData.location,
-                });
-            }
-
-            alert("¡Anuncio publicado con éxito!");
-            setView({ page: 'listings', type: type });
-
-        } catch (error) {
-            console.error("Error al publicar:", error);
-            setErrors({ form: "Hubo un error al publicar. Revisa tu conexión o inténtalo más tarde." });
-        } finally {
-            setIsSubmitting(false);
-            setUploadProgress({ current: 0, total: 0 });
-        }
-    };
-
-    const allPreviews = [
-        ...existingPhotos.map((photo, index) => ({ type: 'existing', url: photo.thumb, index })),
-        ...newImageFiles.map((file, index) => ({ type: 'new', url: URL.createObjectURL(file), index }))
-    ];
-
-    return (
-        <div className="container mx-auto max-w-2xl"><div className="bg-white p-8 rounded-lg shadow-lg">
-            <h2 className="text-2xl font-bold mb-6 text-center">{isEditing ? 'Editar' : 'Publicar'} {isJob ? 'Empleo' : 'Artículo'}</h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-                {errors.form && <p className="text-red-500 text-sm bg-red-100 p-2 rounded-md">{errors.form}</p>}
-
-                <div>
-                    <input type="text" placeholder={isJob ? "Título del Puesto" : "Título del anuncio"} value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.title ? 'border-red-500' : ''}`} />
-                    {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}
-                </div>
-                <div>
-                    <select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.category ? 'border-red-500' : ''}`}>
-                        <option value="">Selecciona una Categoría</option>
-                        {categories.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                    {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category}</p>}
-                </div>
-                {isJob && <input type="text" placeholder="Nombre de la Empresa (Opcional)" value={formData.companyName} onChange={e => setFormData({ ...formData, companyName: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />}
-                <div>
-                    <textarea placeholder={isJob ? "Descripción del puesto, requisitos..." : "Descripción detallada..."} value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.description ? 'border-red-500' : ''}`} rows="4" />
-                    {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
-                </div>
-                {isJob
-                    ? <input type="text" placeholder="Salario (Ej: C$15,000 o A convenir)" value={formData.salary} onChange={e => setFormData({ ...formData, salary: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
-                    : <input type="number" placeholder="Precio (C$) (Opcional)" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
-                }
-                <div>
-                    <select value={location} onChange={e => setLocation(e.target.value)} className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.location ? 'border-red-500' : ''}`}>
-                        <option value="">Selecciona una Ciudad</option>
-                        {nicaraguaCities.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                    {errors.location && <p className="text-red-500 text-xs mt-1">{errors.location}</p>}
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">{isJob ? 'Logo (1 max)' : 'Fotos (12 max)'}</label>
-                    <div className="mt-2 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
-                        {allPreviews.map((p) => (
-                            <div key={`${p.type}-${p.index}`} className="relative">
-                                <img src={p.url} alt={`Preview ${p.index}`} className="h-24 w-24 object-cover rounded-md" />
-                                <button type="button" onClick={() => p.type === 'existing' ? removeExistingImage(p.index) : removeNewImage(p.index)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold">&times;</button>
-                            </div>
-                        ))}
-                        {allPreviews.length < (isJob ? 1 : 12) && (
-                            <label htmlFor="file-upload" className="flex items-center justify-center w-24 h-24 border-2 border-gray-300 border-dashed rounded-md cursor-pointer hover:border-blue-500">
-                                <div className="text-center text-gray-500">+<br />Añadir</div>
-                                <input id="file-upload" type="file" className="sr-only" onChange={handleImageChange} accept="image/*" multiple={!isJob} />
-                            </label>
-                        )}
-                    </div>
-                    {errors.images && <p className="text-red-500 text-xs mt-1">{errors.images}</p>}
-                </div>
-
-                <div className="flex justify-end space-x-4 items-center">
-                    {isSubmitting && uploadProgress.total > 0 && <span className="text-sm text-gray-500">{`Subiendo ${uploadProgress.current} de ${uploadProgress.total}...`}</span>}
-                    <button type="button" onClick={() => setView({ page: 'listings', type: type })} className="bg-gray-200 px-4 py-2 rounded-lg">Cancelar</button>
-                    <button type="submit" disabled={isSubmitting} className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center disabled:bg-blue-300 min-w-[100px]">
-                        {isSubmitting ? <SpinnerIcon /> : (isEditing ? 'Actualizar' : 'Publicar')}
-                    </button>
-                </div>
-            </form>
-        </div></div>
-    );
-}
-
-function ListingDetailPage({ listingId, currentUser, navigateToMessages }) {
-    const [listing, setListing] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [mainImage, setMainImage] = useState('');
-
-    useEffect(() => {
-        const docRef = doc(db, "listings", listingId);
-        const unsubscribe = onSnapshot(docRef, (doc) => {
-            if (doc.exists()) {
-                const data = { id: doc.id, ...doc.data() };
-                setListing(data);
-                if (data.photos && data.photos.length > 0) {
-                    setMainImage(data.photos[0].full);
-                }
-            } else {
-                console.log("No such document!");
-            }
-            setLoading(false);
-        });
-        return () => unsubscribe();
-    }, [listingId]);
-
-    if (loading) return <p className="text-center">Cargando anuncio...</p>;
-    if (!listing) return <p className="text-center">Anuncio no encontrado.</p>;
-    
-    const isJob = listing.type === 'trabajo';
-    const publisherLabel = isJob ? 'Empleador' : 'Vendedor';
-    const contactButtonText = isJob ? 'Contactar' : 'Contactar al Vendedor';
-
-    return (
-        <div className="bg-white p-4 sm:p-8 rounded-lg shadow-lg max-w-4xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div>
-                    <img src={mainImage || 'https://placehold.co/600x400'} alt={listing.title} className="w-full h-80 object-cover rounded-lg mb-4" />
-                    {listing.photos && listing.photos.length > 1 && (
-                        <div className="flex space-x-2 overflow-x-auto">
-                            {listing.photos.map((photo, index) => (
-                                <img key={index} src={photo.thumb} onClick={() => setMainImage(photo.full)} className={`h-20 w-20 object-cover rounded-md cursor-pointer ${mainImage === photo.full ? 'border-2 border-blue-500' : ''}`} />
-                            ))}
-                        </div>
-                    )}
-                </div>
-                <div>
-                    <span className="text-sm font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{listing.category}</span>
-                    <h1 className="text-3xl font-bold my-2">{listing.title}</h1>
-                    {isJob ? (
-                         <p className="text-2xl font-semibold text-gray-800 mb-1">Empresa: {listing.companyName || 'No especificada'}</p>
-                    ) : null}
-                    <p className="text-3xl font-bold text-blue-600 mb-4">
-                        {isJob ? (listing.salary || 'Salario a convenir') : (listing.price ? `C$ ${listing.price}` : 'Precio a Consultar')}
-                    </p>
-                    <p className="text-gray-600 mb-4 whitespace-pre-wrap">{listing.description || "No se agregó una descripción."}</p>
-                    <div className="border-t pt-4">
-                        <h3 className="font-semibold text-lg mb-2">Información del {publisherLabel}</h3>
-                        <p><strong>Nombre:</strong> {listing.userName}</p>
-                        <p><strong>Ubicación:</strong> {listing.location}</p>
-                    </div>
-                    {currentUser && currentUser.uid !== listing.userId && (
-                        <button onClick={() => navigateToMessages({recipientId: listing.userId, recipientName: listing.userName, recipientPhotoURL: listing.userPhotoURL})} className="w-full mt-6 bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 font-bold transition">{contactButtonText}</button>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-}
-
+function BottomNavBar({ setView, currentView, goHome }) { const handlePublishClick = () => { setView({ page: 'publish', type: 'producto' }) }; const navItems = [ { name: 'Inicio', icon: HomeIcon, page: 'home', action: goHome }, { name: 'Mensajes', icon: MessagesIcon, page: 'messages', action: () => setView({ page: 'messages' }) }, { name: 'Publicar', icon: PlusCircleIcon, page: 'publish', action: handlePublishClick, isCentral: true }, { name: 'Anuncios', icon: ListingsIcon, page: 'myListings', action: () => setView({ page: 'myListings' }) }, { name: 'Cuenta', icon: AccountIcon, page: 'profile', action: () => setView({ page: 'profile' }) }, ]; return ( <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-t shadow-lg z-50"><div className="flex justify-around items-center h-16">{navItems.map(item => { const isActive = currentView.page === item.page; const Icon = item.icon; if (item.isCentral) { return ( <button key={item.name} onClick={item.action} className="bg-blue-600 rounded-full w-14 h-14 flex items-center justify-center -mt-6 shadow-lg"><Icon /></button> ); } return ( <button key={item.name} onClick={item.action} className="flex flex-col items-center justify-center text-xs"><Icon isActive={isActive} /><span className={`mt-1 ${isActive ? 'text-blue-600' : 'text-gray-500'}`}>{item.name}</span></button> ); })}</div></div> ); }
+function HomePage({ setView }) { return ( <div className="container mx-auto"><div className="bg-white p-6 rounded-lg shadow-lg mb-8 text-center"><h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">Bienvenido a MercadoNica</h1><p className="text-gray-600 text-lg">Tu plataforma para comprar, vender y encontrar empleo en Nicaragua.</p></div><h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">¿Qué estás buscando hoy?</h2><div className="grid grid-cols-1 md:grid-cols-2 gap-8"><div onClick={() => setView({ page: 'listings', type: 'producto' })} className="bg-white p-8 rounded-lg shadow-lg hover:shadow-xl transition-shadow cursor-pointer flex flex-col items-center text-center"><TagIcon className="h-16 w-16 text-green-500" /><h3 className="text-2xl font-bold mt-4">Artículos en Venta</h3><p className="text-gray-600 mt-2">Explora miles de productos nuevos y de segunda mano.</p></div><div onClick={() => setView({ page: 'listings', type: 'trabajo' })} className="bg-white p-8 rounded-lg shadow-lg hover:shadow-xl transition-shadow cursor-pointer flex flex-col items-center text-center"><BriefcaseIcon className="h-16 w-16 text-blue-500" /><h3 className="text-2xl font-bold mt-4">Ofertas de Empleo</h3><p className="text-gray-600 mt-2">Encuentra tu próximo trabajo o publica tus vacantes.</p></div></div></div> ); }
+function ListingsPage({ type, setView, user }) { const [allListings, setAllListings] = useState([]); const [filteredListings, setFilteredListings] = useState([]); const [loading, setLoading] = useState(true); const [searchTerm, setSearchTerm] = useState(''); const [selectedCity, setSelectedCity] = useState(''); const pageTitle = type === 'producto' ? 'Artículos en Venta' : 'Ofertas de Empleo'; const publishButtonText = type === 'producto' ? 'Vender Artículo' : 'Publicar Empleo'; useEffect(() => { setLoading(true); const q = query(collection(db, "listings"), where("type", "==", type), where("status", "==", "active"), orderBy("createdAt", "desc")); const unsubscribe = onSnapshot(q, (snapshot) => { const listingsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); setAllListings(listingsData); setFilteredListings(listingsData); setLoading(false); }, (error) => { console.error("Error fetching listings:", error); setLoading(false); }); return () => unsubscribe(); }, [type]); useEffect(() => { let result = allListings; if (searchTerm) { result = result.filter(listing => listing.title.toLowerCase().includes(searchTerm.toLowerCase())); } if (selectedCity) { result = result.filter(listing => listing.location === selectedCity); } setFilteredListings(result); }, [searchTerm, selectedCity, allListings]); return ( <div className="container mx-auto"><div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4"><h1 className="text-3xl font-bold">{pageTitle}</h1><div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto"><input type="text" placeholder="Buscar por título..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="border-gray-300 rounded-md shadow-sm w-full sm:w-auto" /><select value={selectedCity} onChange={e => setSelectedCity(e.target.value)} className="border-gray-300 rounded-md shadow-sm w-full sm:w-auto"><option value="">Todas las Ciudades</option>{nicaraguaCities.map(city => <option key={city} value={city}>{city}</option>)}</select></div><button onClick={() => setView({ page: 'publish', type: type })} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 w-full md:w-auto">{publishButtonText}</button></div>{loading ? <ListingsSkeleton /> : ( <> <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">{filteredListings.map(listing => <ListingCard key={listing.id} listing={listing} setView={setView} user={user} />)}</div> {!loading && filteredListings.length === 0 && <p className="text-center text-gray-500 mt-8">No se encontraron anuncios que coincidan con tu búsqueda.</p>} </> )}</div> ); }
+function ListingsSkeleton() { return ( <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">{Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}</div> ); }
+function SkeletonCard() { return ( <div className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse"><div className="w-full h-48 bg-gray-300"></div><div className="p-4 space-y-3"><div className="h-4 bg-gray-300 rounded w-1/3"></div><div className="h-6 bg-gray-300 rounded w-full"></div><div className="h-4 bg-gray-300 rounded w-1/2"></div><div className="h-8 bg-gray-300 rounded w-1/3"></div></div></div> ); }
+function ListingCard({ listing, setView, user }) { const placeholderUrl = `https://placehold.co/400x400/e2e8f0/64748b?text=${listing.type === 'producto' ? 'Producto' : 'Empleo'}`; const [isFavorite, setIsFavorite] = useState(false); useEffect(() => { if (!user) return; const favRef = doc(db, "users", user.uid, "favorites", listing.id); const unsubscribe = onSnapshot(favRef, (doc) => { setIsFavorite(doc.exists()); }); return () => unsubscribe(); }, [user, listing.id]); const toggleFavorite = async (e) => { e.stopPropagation(); if (!user) { alert("Debes iniciar sesión para guardar favoritos."); return; } const favRef = doc(db, "users", user.uid, "favorites", listing.id); if (isFavorite) { await deleteDoc(favRef); } else { await setDoc(favRef, { ...listing, addedAt: serverTimestamp() }); } }; const isJob = listing.type === 'trabajo'; const imageUrl = listing.photos?.[0]?.thumb || placeholderUrl; return ( <div onClick={() => setView({ page: 'listingDetail', listingId: listing.id })} className="bg-white rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:scale-105 relative cursor-pointer flex flex-col"><div className="relative"><img src={imageUrl} alt={listing.title} className="w-full h-48 object-cover" />{user && ( <button onClick={toggleFavorite} className="absolute top-2 right-2 bg-white p-2 rounded-full shadow"><HeartIcon isFavorite={isFavorite} className={`w-6 h-6 ${isFavorite ? 'text-red-500' : 'text-gray-400'}`} /></button> )}{listing.photos && listing.photos.length > 1 && ( <div className="absolute top-2 left-2 bg-black bg-opacity-60 text-white text-xs font-bold px-2 py-1 rounded-md flex items-center"><CameraIcon /><span className="ml-1">{listing.photos.length}</span></div> )}</div><div className="p-4 flex-grow flex flex-col"><span className="text-xs font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded-full self-start">{listing.category}</span><h3 className="font-bold text-lg mt-2 truncate flex-grow">{listing.title}</h3><p className="text-gray-600 text-sm">{listing.location}</p><div className="mt-auto pt-2">{isJob ? ( <p className="text-lg font-bold text-blue-600">{listing.salary || 'Salario a convenir'}</p> ) : ( <p className="text-xl font-bold text-blue-600">{listing.price ? `C$ ${listing.price}` : 'Consultar'}</p> )}</div></div></div> ); }
+function PublishPage({ type, setView, user, listingId }) { const isJob = type === 'trabajo'; const [formData, setFormData] = useState({ title: '', description: '', category: '', price: '', companyName: '', salary: '' }); const [location, setLocation] = useState(''); const [newImageFiles, setNewImageFiles] = useState([]); const [existingPhotos, setExistingPhotos] = useState([]); const [isSubmitting, setIsSubmitting] = useState(false); const [errors, setErrors] = useState({}); const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 }); const categories = isJob ? jobCategories : productCategories; const isEditing = !!listingId; useEffect(() => { if (isEditing) { const fetchListing = async () => { const docRef = doc(db, "listings", listingId); const docSnap = await getDoc(docRef); if (docSnap.exists()) { const data = docSnap.data(); setFormData({ title: data.title, description: data.description, category: data.category, price: data.price || '', companyName: data.companyName || '', salary: data.salary || '' }); setLocation(data.location); setExistingPhotos(data.photos || []); } }; fetchListing(); } }, [listingId, isEditing]); const validateForm = () => { const newErrors = {}; if (!formData.title.trim()) newErrors.title = "El título es obligatorio."; else if (formData.title.trim().length < 5) newErrors.title = "El título debe tener al menos 5 caracteres."; if (!formData.category) newErrors.category = "Debes seleccionar una categoría."; if (!location) newErrors.location = "Debes seleccionar una ubicación."; if (!formData.description.trim()) newErrors.description = "La descripción es obligatoria."; else if (formData.description.trim().length < 15) newErrors.description = "La descripción debe ser más detallada (mínimo 15 caracteres)."; if (!isJob && existingPhotos.length === 0 && newImageFiles.length === 0) newErrors.images = "Debes subir al menos una foto para el artículo."; setErrors(newErrors); return Object.keys(newErrors).length === 0; }; const handleImageChange = (e) => { if (e.target.files) { const filesArray = Array.from(e.target.files); const currentImagesCount = existingPhotos.length + newImageFiles.length; const maxImages = isJob ? 1 : 12; if (currentImagesCount + filesArray.length > maxImages) { setErrors(prev => ({ ...prev, images: `No puedes subir más de ${maxImages} ${isJob ? 'logo/foto' : 'fotos'}.` })); return; } const validFiles = []; for (const file of filesArray) { if (file.size > 5 * 1024 * 1024) { setErrors(prev => ({ ...prev, images: `La imagen "${file.name}" es muy grande (máx 5MB).` })); continue; } if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) { setErrors(prev => ({ ...prev, images: `El archivo "${file.name}" no es una imagen válida.` })); continue; } validFiles.push(file); } if (isJob) { setNewImageFiles(validFiles); } else { setNewImageFiles(prev => [...prev, ...validFiles]); } if (errors.images) setErrors(prev => ({ ...prev, images: null })); } }; const removeNewImage = (index) => { setNewImageFiles(prev => prev.filter((_, i) => i !== index)); }; const removeExistingImage = (index) => { setExistingPhotos(prev => prev.filter((_, i) => i !== index)); }; const handleSubmit = async (e) => { e.preventDefault(); if (!user) { setErrors({ form: "Debes iniciar sesión para publicar." }); return; } if (!validateForm()) return; setIsSubmitting(true); setErrors({}); try { const uploadAndGetURLs = async (file) => { const timestamp = Date.now(); const randomId = Math.random().toString(36).substring(2, 8); const baseName = `${user.uid}/${timestamp}_${randomId}_${file.name}`; const fullImg = await imageCompression(file, { maxSizeMB: 0.8, maxWidthOrHeight: 1024 }); const fullImgRef = ref(storage, `listings/${baseName}_full.jpg`); await uploadBytes(fullImgRef, fullImg); const fullUrl = await getDownloadURL(fullImgRef); const thumbImg = await imageCompression(file, { maxSizeMB: 0.1, maxWidthOrHeight: 400 }); const thumbImgRef = ref(storage, `listings/${baseName}_thumb.jpg`); await uploadBytes(thumbImgRef, thumbImg); const thumbUrl = await getDownloadURL(thumbImgRef); return { full: fullUrl, thumb: thumbUrl }; }; setUploadProgress({ current: 0, total: newImageFiles.length }); const newPhotoObjects = []; for (let i = 0; i < newImageFiles.length; i++) { const file = newImageFiles[i]; const urls = await uploadAndGetURLs(file); newPhotoObjects.push(urls); setUploadProgress({ current: i + 1, total: newImageFiles.length }); } const allPhotos = [...existingPhotos, ...newPhotoObjects]; const commonData = { title: formData.title, description: formData.description, category: formData.category, location, type, userId: user.uid, userName: user.displayName, userPhotoURL: user.photoURL, status: 'active', updatedAt: serverTimestamp() }; const listingData = isJob ? { ...commonData, companyName: formData.companyName, salary: formData.salary, photos: allPhotos } : { ...commonData, price: Number(formData.price) || 0, photos: allPhotos }; if (isEditing) { const docRef = doc(db, "listings", listingId); await updateDoc(docRef, listingData); } else { const newDocRef = await addDoc(collection(db, "listings"), { ...listingData, createdAt: serverTimestamp() }); logEvent(analytics, 'publish_listing', { user_id: user.uid, listing_id: newDocRef.id, listing_type: type, category: listingData.category, location: listingData.location, }); } alert("¡Anuncio publicado con éxito!"); setView({ page: 'listings', type: type }); } catch (error) { console.error("Error al publicar:", error); setErrors({ form: "Hubo un error al publicar. Revisa tu conexión o inténtalo más tarde." }); } finally { setIsSubmitting(false); setUploadProgress({ current: 0, total: 0 }); } }; const allPreviews = [ ...existingPhotos.map((photo, index) => ({ type: 'existing', url: photo.thumb, index })), ...newImageFiles.map((file, index) => ({ type: 'new', url: URL.createObjectURL(file), index })) ]; return ( <div className="container mx-auto max-w-2xl"><div className="bg-white p-8 rounded-lg shadow-lg"><h2 className="text-2xl font-bold mb-6 text-center">{isEditing ? 'Editar' : 'Publicar'} {isJob ? 'Empleo' : 'Artículo'}</h2><form onSubmit={handleSubmit} className="space-y-4">{errors.form && <p className="text-red-500 text-sm bg-red-100 p-2 rounded-md">{errors.form}</p>}<div><input type="text" placeholder={isJob ? "Título del Puesto" : "Título del anuncio"} value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.title ? 'border-red-500' : ''}`} />{errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}</div><div><select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.category ? 'border-red-500' : ''}`}><option value="">Selecciona una Categoría</option>{categories.map(c => <option key={c} value={c}>{c}</option>)}</select>{errors.category && <p className="text-red-500 text-xs mt-1">{errors.category}</p>}</div>{isJob && <input type="text" placeholder="Nombre de la Empresa (Opcional)" value={formData.companyName} onChange={e => setFormData({ ...formData, companyName: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />}<div><textarea placeholder={isJob ? "Descripción del puesto, requisitos..." : "Descripción detallada..."} value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.description ? 'border-red-500' : ''}`} rows="4" />{errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}</div>{isJob ? <input type="text" placeholder="Salario (Ej: C$15,000 o A convenir)" value={formData.salary} onChange={e => setFormData({ ...formData, salary: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" /> : <input type="number" placeholder="Precio (C$) (Opcional)" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />}<div><select value={location} onChange={e => setLocation(e.target.value)} className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.location ? 'border-red-500' : ''}`}><option value="">Selecciona una Ciudad</option>{nicaraguaCities.map(c => <option key={c} value={c}>{c}</option>)}</select>{errors.location && <p className="text-red-500 text-xs mt-1">{errors.location}</p>}</div><div><label className="block text-sm font-medium text-gray-700">{isJob ? 'Logo (1 max)' : 'Fotos (12 max)'}</label><div className="mt-2 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">{allPreviews.map((p) => ( <div key={`${p.type}-${p.index}`} className="relative"><img src={p.url} alt={`Preview ${p.index}`} className="h-24 w-24 object-cover rounded-md" /><button type="button" onClick={() => p.type === 'existing' ? removeExistingImage(p.index) : removeNewImage(p.index)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold">&times;</button></div> ))}{allPreviews.length < (isJob ? 1 : 12) && ( <label htmlFor="file-upload" className="flex items-center justify-center w-24 h-24 border-2 border-gray-300 border-dashed rounded-md cursor-pointer hover:border-blue-500"><div className="text-center text-gray-500">+<br />Añadir</div><input id="file-upload" type="file" className="sr-only" onChange={handleImageChange} accept="image/*" multiple={!isJob} /></label> )}{errors.images && <p className="text-red-500 text-xs mt-1">{errors.images}</p>}</div></div><div className="flex justify-end space-x-4 items-center">{isSubmitting && uploadProgress.total > 0 && <span className="text-sm text-gray-500">{`Subiendo ${uploadProgress.current} de ${uploadProgress.total}...`}</span>}<button type="button" onClick={() => setView({ page: 'listings', type: type })} className="bg-gray-200 px-4 py-2 rounded-lg">Cancelar</button><button type="submit" disabled={isSubmitting} className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center disabled:bg-blue-300 min-w-[100px]">{isSubmitting ? <SpinnerIcon /> : (isEditing ? 'Actualizar' : 'Publicar')}</button></div></form></div></div> ); }
+function ListingDetailPage({ listingId, currentUser, navigateToMessages }) { const [listing, setListing] = useState(null); const [loading, setLoading] = useState(true); const [mainImage, setMainImage] = useState(''); useEffect(() => { const docRef = doc(db, "listings", listingId); const unsubscribe = onSnapshot(docRef, (doc) => { if (doc.exists()) { const data = { id: doc.id, ...doc.data() }; setListing(data); if (data.photos && data.photos.length > 0) { setMainImage(data.photos[0].full); } } else { console.log("No such document!"); } setLoading(false); }); return () => unsubscribe(); }, [listingId]); if (loading) return <p className="text-center">Cargando anuncio...</p>; if (!listing) return <p className="text-center">Anuncio no encontrado.</p>; const isJob = listing.type === 'trabajo'; const publisherLabel = isJob ? 'Empleador' : 'Vendedor'; const contactButtonText = isJob ? 'Contactar' : 'Contactar al Vendedor'; return ( <div className="bg-white p-4 sm:p-8 rounded-lg shadow-lg max-w-4xl mx-auto"><div className="grid grid-cols-1 md:grid-cols-2 gap-8"><div><img src={mainImage || 'https://placehold.co/600x400'} alt={listing.title} className="w-full h-80 object-cover rounded-lg mb-4" />{listing.photos && listing.photos.length > 1 && ( <div className="flex space-x-2 overflow-x-auto">{listing.photos.map((photo, index) => ( <img key={index} src={photo.thumb} onClick={() => setMainImage(photo.full)} className={`h-20 w-20 object-cover rounded-md cursor-pointer ${mainImage === photo.full ? 'border-2 border-blue-500' : ''}`} /> ))}</div> )}</div><div><span className="text-sm font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{listing.category}</span><h1 className="text-3xl font-bold my-2">{listing.title}</h1>{isJob ? ( <p className="text-2xl font-semibold text-gray-800 mb-1">Empresa: {listing.companyName || 'No especificada'}</p> ) : null}<p className="text-3xl font-bold text-blue-600 mb-4">{isJob ? (listing.salary || 'Salario a convenir') : (listing.price ? `C$ ${listing.price}` : 'Precio a Consultar')}</p><p className="text-gray-600 mb-4 whitespace-pre-wrap">{listing.description || "No se agregó una descripción."}</p><div className="border-t pt-4"><h3 className="font-semibold text-lg mb-2">Información del {publisherLabel}</h3><p><strong>Nombre:</strong> {listing.userName}</p><p><strong>Ubicación:</strong> {listing.location}</p></div>{currentUser && currentUser.uid !== listing.userId && ( <button onClick={() => navigateToMessages({recipientId: listing.userId, recipientName: listing.userName, recipientPhotoURL: listing.userPhotoURL})} className="w-full mt-6 bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 font-bold transition">{contactButtonText}</button> )}</div></div></div> ); }
 function ProfilePage({ user, setUser, setView }) { if (!user) return <p>Cargando perfil...</p>; const menuItems = [ { label: "Ajustes de Cuenta", view: "accountSettings" }, { label: "Mis Anuncios", view: "myListings" }, { label: "Mis Favoritos", view: "favorites" } ]; return ( <div className="container mx-auto max-w-2xl"><div className="bg-white p-8 rounded-lg shadow-lg text-center"><img src={user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`} alt="Perfil" className="w-24 h-24 rounded-full mx-auto mb-4" /><h2 className="text-2xl font-bold">{user.displayName}</h2><p className="text-gray-500">{user.email}</p></div><div className="bg-white p-4 rounded-lg shadow-lg mt-6"><ul className="divide-y divide-gray-200">{menuItems.map(item => ( <li key={item.view} onClick={() => setView({ page: item.view })} className="p-4 hover:bg-gray-50 cursor-pointer flex justify-between items-center"><span>{item.label}</span><span>&rarr;</span></li> ))}</ul></div></div> ); }
 function AccountSettings({ user, setUser }) { const [displayName, setDisplayName] = useState(user?.displayName || ''); const [isSaving, setIsSaving] = useState(false); const [photoFile, setPhotoFile] = useState(null); const [photoPreview, setPhotoPreview] = useState(user?.photoURL || ''); const fileInputRef = useRef(null); const handlePhotoChange = (e) => { if (e.target.files[0]) { setPhotoFile(e.target.files[0]); setPhotoPreview(URL.createObjectURL(e.target.files[0])); } }; const handleSave = async (e) => { e.preventDefault(); setIsSaving(true); try { let newPhotoURL = user.photoURL; if (photoFile) { const photoRef = ref(storage, `profile-pictures/${user.uid}`); await uploadBytes(photoRef, photoFile); newPhotoURL = await getDownloadURL(photoRef); } await updateProfile(auth.currentUser, { displayName, photoURL: newPhotoURL }); const userDocRef = doc(db, "users", user.uid); await updateDoc(userDocRef, { displayName, photoURL: newPhotoURL }); setUser(prev => ({...prev, displayName, photoURL: newPhotoURL})); alert("Perfil actualizado con éxito."); } catch (error) { console.error("Error al actualizar perfil:", error); alert("Hubo un error al actualizar tu perfil."); } setIsSaving(false); }; return ( <div className="bg-white p-8 rounded-lg shadow-lg max-w-2xl mx-auto"><h2 className="text-2xl font-bold mb-6">Ajustes de Cuenta</h2><form onSubmit={handleSave} className="space-y-6"><div className="flex flex-col items-center"><img src={photoPreview || `https://i.pravatar.cc/150?u=${user?.uid}`} alt="Perfil" className="w-24 h-24 rounded-full mb-4 cursor-pointer" onClick={() => fileInputRef.current.click()} /><input type="file" ref={fileInputRef} onChange={handlePhotoChange} className="hidden" accept="image/*" /><button type="button" onClick={() => fileInputRef.current.click()} className="text-sm text-blue-600 hover:underline">Cambiar foto</button></div><div><label className="block text-sm font-medium text-gray-700">Nombre de Usuario</label><input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required /></div><div className="flex justify-end"><button type="submit" disabled={isSaving} className="bg-blue-600 text-white px-4 py-2 rounded-lg disabled:bg-blue-300 flex items-center">{isSaving && <SpinnerIcon />}{isSaving ? 'Guardando...' : 'Guardar Cambios'}</button></div></form></div> ); }
 function MyListings({ user, setView }) { const [myListings, setMyListings] = useState([]); const [loading, setLoading] = useState(true); const [showDeleteModal, setShowDeleteModal] = useState(null); const [showSoldModal, setShowSoldModal] = useState(null); useEffect(() => { if (!user) return; const q = query(collection(db, "listings"), where("userId", "==", user.uid), orderBy("createdAt", "desc")); const unsubscribe = onSnapshot(q, (snapshot) => { setMyListings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); setLoading(false); }); return () => unsubscribe(); }, [user]); const handleDelete = async (listingToDelete) => { if (!listingToDelete) return; try { if (listingToDelete.photos && listingToDelete.photos.length > 0) { const deletePromises = listingToDelete.photos.map(photo => { try { const fullRef = ref(storage, photo.full); const thumbRef = ref(storage, photo.thumb); return Promise.all([deleteObject(fullRef), deleteObject(thumbRef)]); } catch (e) { console.warn("No se pudo borrar la foto:", e.message); return Promise.resolve(); } }); await Promise.all(deletePromises); } await deleteDoc(doc(db, "listings", listingToDelete.id)); alert("Anuncio eliminado."); } catch (error) { console.error("Error eliminando:", error); alert("Error al eliminar."); } finally { setShowDeleteModal(null); } }; const handleMarkAsSold = async (listingToMark) => { if (!listingToMark) return; try { await updateDoc(doc(db, "listings", listingToMark.id), { status: 'sold' }); alert("Anuncio marcado como vendido."); } catch (error) { console.error("Error marcando como vendido:", error); alert("Error al actualizar."); } finally { setShowSoldModal(null); } }; return ( <> <div className="bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto"><h2 className="text-2xl font-bold mb-6">Mis Anuncios</h2>{loading ? <p>Cargando...</p> : !myListings.length ? <p>No has publicado nada.</p> : <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">{myListings.map(listing => ( <div key={listing.id} className={`border rounded-lg p-2 flex flex-col justify-between ${listing.status !== 'active' ? 'bg-gray-100 opacity-60' : ''}`}><div><img src={listing.photos?.[0]?.thumb || `https://placehold.co/600x400/e2e8f0/64748b?text=${listing.type}`} className="w-full h-32 object-cover rounded-md" /><h3 className="font-semibold truncate mt-2">{listing.title}</h3>{listing.status === 'sold' && <p className="text-sm font-bold text-green-600">VENDIDO</p>}</div><div className="flex gap-2 mt-2"><button onClick={() => setView({ page: 'publish', type: listing.type, listingId: listing.id })} className="w-full bg-blue-500 text-white text-sm font-semibold py-1 rounded-md hover:bg-blue-600">Editar</button>{listing.status === 'active' && listing.type === 'producto' && <button onClick={() => setShowSoldModal(listing)} className="w-full bg-green-500 text-white text-sm font-semibold py-1 rounded-md hover:bg-green-600">Vendido</button>}<button onClick={() => setShowDeleteModal(listing)} className="w-full bg-red-500 text-white text-sm font-semibold py-1 rounded-md hover:bg-red-600">Eliminar</button></div></div> ))}</div>}</div> {showDeleteModal && ( <ConfirmationModal message="¿Seguro que quieres eliminar este anuncio?" onConfirm={() => handleDelete(showDeleteModal)} onCancel={() => setShowDeleteModal(null)} /> )} {showSoldModal && ( <ConfirmationModal message="¿Marcar como vendido? No será visible en búsquedas." onConfirm={() => handleMarkAsSold(showSoldModal)} onCancel={() => setShowSoldModal(null)} /> )} </> ); }
