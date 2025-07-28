@@ -700,26 +700,18 @@ function ListingDetailPage({ listingId, currentUser, navigateToMessages }) {
     if (loading) return <p className="text-center">Cargando anuncio...</p>;
     if (!listing) return <p className="text-center">Anuncio no encontrado.</p>;
     
-    const publisherLabel = listing.type === 'empleo' ? 'Contratista' : 'Vendedor';
+    const publisherLabel = 'Vendedor';
 
     return (
         <div className="bg-white p-4 sm:p-8 rounded-lg shadow-lg max-w-4xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
-                    {listing.type === 'producto' ? (
-                        <>
-                            <img src={mainImage || 'https://placehold.co/600x400'} alt={listing.title} className="w-full h-80 object-cover rounded-lg mb-4" />
-                            {listing.photos && listing.photos.length > 1 && (
-                                <div className="flex space-x-2 overflow-x-auto">
-                                    {listing.photos.map((photo, index) => (
-                                        <img key={index} src={photo} onClick={() => setMainImage(photo)} className={`h-20 w-20 object-cover rounded-md cursor-pointer ${mainImage === photo ? 'border-2 border-blue-500' : ''}`} />
-                                    ))}
-                                </div>
-                            )}
-                        </>
-                    ) : (
-                        <div className="w-full h-80 bg-gray-100 rounded-lg flex items-center justify-center">
-                           <BriefcaseIcon className="h-32 w-32 text-gray-400" />
+                    <img src={mainImage || 'https://placehold.co/600x400'} alt={listing.title} className="w-full h-80 object-cover rounded-lg mb-4" />
+                    {listing.photos && listing.photos.length > 1 && (
+                        <div className="flex space-x-2 overflow-x-auto">
+                            {listing.photos.map((photo, index) => (
+                                <img key={index} src={photo} onClick={() => setMainImage(photo)} className={`h-20 w-20 object-cover rounded-md cursor-pointer ${mainImage === photo ? 'border-2 border-blue-500' : ''}`} />
+                            ))}
                         </div>
                     )}
                 </div>
