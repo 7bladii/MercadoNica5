@@ -45,7 +45,15 @@ const productCategories = [ "Autos y Vehículos", "Motos", "Bienes Raíces", "Ce
 const jobCategories = [ "Administración y Oficina", "Atención al Cliente", "Call Center y Telemercadeo", "Compras y Comercio Exterior", "Construcción y Obra", "Diseño y Artes Gráficas", "Docencia", "Finanzas y Contabilidad", "Gerencia y Dirección", "Informática y Telecomunicaciones", "Logística y Almacén", "Mantenimiento y Reparaciones", "Marketing y Publicidad", "Medicina y Salud", "Producción y Operarios", "Recursos Humanos", "Servicios Generales y Aseo", "Turismo y Hostelería", "Ventas", "Otro" ].sort();
 
 // --- CONFIGURACIÓN DE FIREBASE ---
-const firebaseConfig = { apiKey: "AIzaSyChYTYsSLFfWsk2UVm6BsldnaGw42AwDC4", authDomain: "mecardonica.firebaseapp.com", projectId: "mecardonica", storageBucket: "mecardonica.appspot.com", messagingSenderId: "980886283273", appId: "1:980886283273:web:17d0586151cc5c96d944d8", measurementId: "G-RRQL5YD0V9" };
+const firebaseConfig = {
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID,
+  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
+};
 
 // --- INICIALIZACIÓN DE FIREBASE Y ANALYTICS ---
 const app = initializeApp(firebaseConfig);
@@ -371,9 +379,9 @@ function PublishPage({ type, setView, user, listingId }) {
     const isJob = type === 'trabajo';
     const [formData, setFormData] = useState({ title: '', description: '', category: '', price: '', companyName: '', salary: '' });
     const [location, setLocation] = useState('');
-    const [newImageFiles, setNewImageFiles] = useState([]); 
-    const [existingPhotos, setExistingPhotos] = useState([]); 
-    
+    const [newImageFiles, setNewImageFiles] = useState([]);
+    const [existingPhotos, setExistingPhotos] = useState([]);
+
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errors, setErrors] = useState({});
     const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
@@ -388,9 +396,9 @@ function PublishPage({ type, setView, user, listingId }) {
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    setFormData({ 
-                        title: data.title, 
-                        description: data.description, 
+                    setFormData({
+                        title: data.title,
+                        description: data.description,
                         category: data.category,
                         price: data.price || '',
                         companyName: data.companyName || '',
@@ -408,52 +416,52 @@ function PublishPage({ type, setView, user, listingId }) {
         const newErrors = {};
         if (!formData.title.trim()) newErrors.title = "El título es obligatorio.";
         else if (formData.title.trim().length < 5) newErrors.title = "El título debe tener al menos 5 caracteres.";
-        
+
         if (!formData.category) newErrors.category = "Debes seleccionar una categoría.";
         if (!location) newErrors.location = "Debes seleccionar una ubicación.";
-        
+
         if (!formData.description.trim()) newErrors.description = "La descripción es obligatoria.";
         else if (formData.description.trim().length < 15) newErrors.description = "La descripción debe ser más detallada (mínimo 15 caracteres).";
-        
+
         if (!isJob && existingPhotos.length === 0 && newImageFiles.length === 0) newErrors.images = "Debes subir al menos una foto para el artículo.";
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleImageChange = async (e) => {
+    const handleImageChange = (e) => {
         if (e.target.files) {
             const filesArray = Array.from(e.target.files);
             const currentImagesCount = existingPhotos.length + newImageFiles.length;
             const maxImages = isJob ? 1 : 12;
-            
+
             if (currentImagesCount + filesArray.length > maxImages) {
-                setErrors(prev => ({...prev, images: `No puedes subir más de ${maxImages} ${isJob ? 'logo/foto' : 'fotos'}.`}));
+                setErrors(prev => ({ ...prev, images: `No puedes subir más de ${maxImages} ${isJob ? 'logo/foto' : 'fotos'}.` }));
                 return;
             }
 
             const validFiles = [];
             for (const file of filesArray) {
                 if (file.size > 5 * 1024 * 1024) { // 5 MB
-                    setErrors(prev => ({...prev, images: `La imagen "${file.name}" es muy grande (máx 5MB).`}));
+                    setErrors(prev => ({ ...prev, images: `La imagen "${file.name}" es muy grande (máx 5MB).` }));
                     continue;
                 }
                 if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
-                    setErrors(prev => ({...prev, images: `El archivo "${file.name}" no es una imagen válida.`}));
+                    setErrors(prev => ({ ...prev, images: `El archivo "${file.name}" no es una imagen válida.` }));
                     continue;
                 }
                 validFiles.push(file);
             }
-            
+
             if (isJob) {
                 setNewImageFiles(validFiles);
             } else {
                 setNewImageFiles(prev => [...prev, ...validFiles]);
             }
-            if (errors.images) setErrors(prev => ({...prev, images: null}));
+            if (errors.images) setErrors(prev => ({ ...prev, images: null }));
         }
     };
-    
+
     const removeNewImage = (index) => {
         setNewImageFiles(prev => prev.filter((_, i) => i !== index));
     };
@@ -469,7 +477,7 @@ function PublishPage({ type, setView, user, listingId }) {
 
         setIsSubmitting(true);
         setErrors({});
-        
+
         try {
             const uploadAndGetURLs = async (file) => {
                 const timestamp = Date.now();
@@ -485,24 +493,35 @@ function PublishPage({ type, setView, user, listingId }) {
                 const thumbImgRef = ref(storage, `listings/${baseName}_thumb.jpg`);
                 await uploadBytes(thumbImgRef, thumbImg);
                 const thumbUrl = await getDownloadURL(thumbImgRef);
-                
-                setUploadProgress(prev => ({ ...prev, current: prev.current + 1 }));
+
                 return { full: fullUrl, thumb: thumbUrl };
             };
 
             setUploadProgress({ current: 0, total: newImageFiles.length });
 
-            const newPhotoObjects = await Promise.all(newImageFiles.map(uploadAndGetURLs));
+            const newPhotoObjects = [];
+            for (let i = 0; i < newImageFiles.length; i++) {
+                const file = newImageFiles[i];
+                const urls = await uploadAndGetURLs(file);
+                newPhotoObjects.push(urls);
+                setUploadProgress({ current: i + 1, total: newImageFiles.length });
+            }
+
             const allPhotos = [...existingPhotos, ...newPhotoObjects];
 
             const commonData = {
-                title: formData.title, description: formData.description, category: formData.category,
-                location, type, userId: user.uid,
-                userName: user.displayName, userPhotoURL: user.photoURL,
-                status: 'active', updatedAt: serverTimestamp()
+                title: formData.title,
+                description: formData.description,
+                category: formData.category,
+                location,
+                type,
+                userId: user.uid,
+                userName: user.displayName,
+                userPhotoURL: user.photoURL,
+                status: 'active',
+                updatedAt: serverTimestamp()
             };
-
-            const listingData = isJob 
+            const listingData = isJob
                 ? { ...commonData, companyName: formData.companyName, salary: formData.salary, photos: allPhotos }
                 : { ...commonData, price: Number(formData.price) || 0, photos: allPhotos };
 
@@ -519,7 +538,7 @@ function PublishPage({ type, setView, user, listingId }) {
                     location: listingData.location,
                 });
             }
-            
+
             alert("¡Anuncio publicado con éxito!");
             setView({ page: 'listings', type: type });
 
@@ -536,41 +555,41 @@ function PublishPage({ type, setView, user, listingId }) {
         ...existingPhotos.map((photo, index) => ({ type: 'existing', url: photo.thumb, index })),
         ...newImageFiles.map((file, index) => ({ type: 'new', url: URL.createObjectURL(file), index }))
     ];
-    
+
     return (
         <div className="container mx-auto max-w-2xl"><div className="bg-white p-8 rounded-lg shadow-lg">
             <h2 className="text-2xl font-bold mb-6 text-center">{isEditing ? 'Editar' : 'Publicar'} {isJob ? 'Empleo' : 'Artículo'}</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
                 {errors.form && <p className="text-red-500 text-sm bg-red-100 p-2 rounded-md">{errors.form}</p>}
-                
+
                 <div>
-                    <input type="text" placeholder={isJob ? "Título del Puesto" : "Título del anuncio"} value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.title ? 'border-red-500' : ''}`} />
+                    <input type="text" placeholder={isJob ? "Título del Puesto" : "Título del anuncio"} value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.title ? 'border-red-500' : ''}`} />
                     {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}
                 </div>
                 <div>
-                    <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.category ? 'border-red-500' : ''}`}>
+                    <select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.category ? 'border-red-500' : ''}`}>
                         <option value="">Selecciona una Categoría</option>
-                        {categories.map(c=><option key={c} value={c}>{c}</option>)}
+                        {categories.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                     {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category}</p>}
                 </div>
-                {isJob && <input type="text" placeholder="Nombre de la Empresa (Opcional)" value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />}
+                {isJob && <input type="text" placeholder="Nombre de la Empresa (Opcional)" value={formData.companyName} onChange={e => setFormData({ ...formData, companyName: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />}
                 <div>
-                    <textarea placeholder={isJob ? "Descripción del puesto, requisitos..." : "Descripción detallada..."} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.description ? 'border-red-500' : ''}`} rows="4" />
+                    <textarea placeholder={isJob ? "Descripción del puesto, requisitos..." : "Descripción detallada..."} value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.description ? 'border-red-500' : ''}`} rows="4" />
                     {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
                 </div>
-                {isJob 
-                    ? <input type="text" placeholder="Salario (Ej: C$15,000 o A convenir)" value={formData.salary} onChange={e => setFormData({...formData, salary: e.target.value})} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
-                    : <input type="number" placeholder="Precio (C$) (Opcional)" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
+                {isJob
+                    ? <input type="text" placeholder="Salario (Ej: C$15,000 o A convenir)" value={formData.salary} onChange={e => setFormData({ ...formData, salary: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
+                    : <input type="number" placeholder="Precio (C$) (Opcional)" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
                 }
                 <div>
                     <select value={location} onChange={e => setLocation(e.target.value)} className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.location ? 'border-red-500' : ''}`}>
                         <option value="">Selecciona una Ciudad</option>
-                        {nicaraguaCities.map(c=><option key={c} value={c}>{c}</option>)}
+                        {nicaraguaCities.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                     {errors.location && <p className="text-red-500 text-xs mt-1">{errors.location}</p>}
                 </div>
-                
+
                 <div>
                     <label className="block text-sm font-medium text-gray-700">{isJob ? 'Logo (1 max)' : 'Fotos (12 max)'}</label>
                     <div className="mt-2 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
@@ -582,7 +601,7 @@ function PublishPage({ type, setView, user, listingId }) {
                         ))}
                         {allPreviews.length < (isJob ? 1 : 12) && (
                             <label htmlFor="file-upload" className="flex items-center justify-center w-24 h-24 border-2 border-gray-300 border-dashed rounded-md cursor-pointer hover:border-blue-500">
-                                <div className="text-center text-gray-500">+<br/>Añadir</div>
+                                <div className="text-center text-gray-500">+<br />Añadir</div>
                                 <input id="file-upload" type="file" className="sr-only" onChange={handleImageChange} accept="image/*" multiple={!isJob} />
                             </label>
                         )}
@@ -668,7 +687,6 @@ function ListingDetailPage({ listingId, currentUser, navigateToMessages }) {
     );
 }
 
-// --- Los componentes restantes (Profile, AccountSettings, Chat, etc.) se mantienen sin cambios significativos ---
 function ProfilePage({ user, setUser, setView }) { if (!user) return <p>Cargando perfil...</p>; const menuItems = [ { label: "Ajustes de Cuenta", view: "accountSettings" }, { label: "Mis Anuncios", view: "myListings" }, { label: "Mis Favoritos", view: "favorites" } ]; return ( <div className="container mx-auto max-w-2xl"><div className="bg-white p-8 rounded-lg shadow-lg text-center"><img src={user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`} alt="Perfil" className="w-24 h-24 rounded-full mx-auto mb-4" /><h2 className="text-2xl font-bold">{user.displayName}</h2><p className="text-gray-500">{user.email}</p></div><div className="bg-white p-4 rounded-lg shadow-lg mt-6"><ul className="divide-y divide-gray-200">{menuItems.map(item => ( <li key={item.view} onClick={() => setView({ page: item.view })} className="p-4 hover:bg-gray-50 cursor-pointer flex justify-between items-center"><span>{item.label}</span><span>&rarr;</span></li> ))}</ul></div></div> ); }
 function AccountSettings({ user, setUser }) { const [displayName, setDisplayName] = useState(user?.displayName || ''); const [isSaving, setIsSaving] = useState(false); const [photoFile, setPhotoFile] = useState(null); const [photoPreview, setPhotoPreview] = useState(user?.photoURL || ''); const fileInputRef = useRef(null); const handlePhotoChange = (e) => { if (e.target.files[0]) { setPhotoFile(e.target.files[0]); setPhotoPreview(URL.createObjectURL(e.target.files[0])); } }; const handleSave = async (e) => { e.preventDefault(); setIsSaving(true); try { let newPhotoURL = user.photoURL; if (photoFile) { const photoRef = ref(storage, `profile-pictures/${user.uid}`); await uploadBytes(photoRef, photoFile); newPhotoURL = await getDownloadURL(photoRef); } await updateProfile(auth.currentUser, { displayName, photoURL: newPhotoURL }); const userDocRef = doc(db, "users", user.uid); await updateDoc(userDocRef, { displayName, photoURL: newPhotoURL }); setUser(prev => ({...prev, displayName, photoURL: newPhotoURL})); alert("Perfil actualizado con éxito."); } catch (error) { console.error("Error al actualizar perfil:", error); alert("Hubo un error al actualizar tu perfil."); } setIsSaving(false); }; return ( <div className="bg-white p-8 rounded-lg shadow-lg max-w-2xl mx-auto"><h2 className="text-2xl font-bold mb-6">Ajustes de Cuenta</h2><form onSubmit={handleSave} className="space-y-6"><div className="flex flex-col items-center"><img src={photoPreview || `https://i.pravatar.cc/150?u=${user?.uid}`} alt="Perfil" className="w-24 h-24 rounded-full mb-4 cursor-pointer" onClick={() => fileInputRef.current.click()} /><input type="file" ref={fileInputRef} onChange={handlePhotoChange} className="hidden" accept="image/*" /><button type="button" onClick={() => fileInputRef.current.click()} className="text-sm text-blue-600 hover:underline">Cambiar foto</button></div><div><label className="block text-sm font-medium text-gray-700">Nombre de Usuario</label><input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required /></div><div className="flex justify-end"><button type="submit" disabled={isSaving} className="bg-blue-600 text-white px-4 py-2 rounded-lg disabled:bg-blue-300 flex items-center">{isSaving && <SpinnerIcon />}{isSaving ? 'Guardando...' : 'Guardar Cambios'}</button></div></form></div> ); }
 function MyListings({ user, setView }) { const [myListings, setMyListings] = useState([]); const [loading, setLoading] = useState(true); const [showDeleteModal, setShowDeleteModal] = useState(null); const [showSoldModal, setShowSoldModal] = useState(null); useEffect(() => { if (!user) return; const q = query(collection(db, "listings"), where("userId", "==", user.uid), orderBy("createdAt", "desc")); const unsubscribe = onSnapshot(q, (snapshot) => { setMyListings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); setLoading(false); }); return () => unsubscribe(); }, [user]); const handleDelete = async (listingToDelete) => { if (!listingToDelete) return; try { if (listingToDelete.photos && listingToDelete.photos.length > 0) { const deletePromises = listingToDelete.photos.map(photo => { try { const fullRef = ref(storage, photo.full); const thumbRef = ref(storage, photo.thumb); return Promise.all([deleteObject(fullRef), deleteObject(thumbRef)]); } catch (e) { console.warn("No se pudo borrar la foto:", e.message); return Promise.resolve(); } }); await Promise.all(deletePromises); } await deleteDoc(doc(db, "listings", listingToDelete.id)); alert("Anuncio eliminado."); } catch (error) { console.error("Error eliminando:", error); alert("Error al eliminar."); } finally { setShowDeleteModal(null); } }; const handleMarkAsSold = async (listingToMark) => { if (!listingToMark) return; try { await updateDoc(doc(db, "listings", listingToMark.id), { status: 'sold' }); alert("Anuncio marcado como vendido."); } catch (error) { console.error("Error marcando como vendido:", error); alert("Error al actualizar."); } finally { setShowSoldModal(null); } }; return ( <> <div className="bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto"><h2 className="text-2xl font-bold mb-6">Mis Anuncios</h2>{loading ? <p>Cargando...</p> : !myListings.length ? <p>No has publicado nada.</p> : <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">{myListings.map(listing => ( <div key={listing.id} className={`border rounded-lg p-2 flex flex-col justify-between ${listing.status !== 'active' ? 'bg-gray-100 opacity-60' : ''}`}><div><img src={listing.photos?.[0]?.thumb || `https://placehold.co/600x400/e2e8f0/64748b?text=${listing.type}`} className="w-full h-32 object-cover rounded-md" /><h3 className="font-semibold truncate mt-2">{listing.title}</h3>{listing.status === 'sold' && <p className="text-sm font-bold text-green-600">VENDIDO</p>}</div><div className="flex gap-2 mt-2"><button onClick={() => setView({ page: 'publish', type: listing.type, listingId: listing.id })} className="w-full bg-blue-500 text-white text-sm font-semibold py-1 rounded-md hover:bg-blue-600">Editar</button>{listing.status === 'active' && listing.type === 'producto' && <button onClick={() => setShowSoldModal(listing)} className="w-full bg-green-500 text-white text-sm font-semibold py-1 rounded-md hover:bg-green-600">Vendido</button>}<button onClick={() => setShowDeleteModal(listing)} className="w-full bg-red-500 text-white text-sm font-semibold py-1 rounded-md hover:bg-red-600">Eliminar</button></div></div> ))}</div>}</div> {showDeleteModal && ( <ConfirmationModal message="¿Seguro que quieres eliminar este anuncio?" onConfirm={() => handleDelete(showDeleteModal)} onCancel={() => setShowDeleteModal(null)} /> )} {showSoldModal && ( <ConfirmationModal message="¿Marcar como vendido? No será visible en búsquedas." onConfirm={() => handleMarkAsSold(showSoldModal)} onCancel={() => setShowSoldModal(null)} /> )} </> ); }
