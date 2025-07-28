@@ -1,9 +1,10 @@
 [
   {
     "origin": [
+      "http://localhost:3000",
       "https://mercado-nica.vercel.app",
-      "https://mercado-nica1997-git-main-bladimirs-projects-ed2af221.vercel.app",
-      "https://mercado-nica1997-tgv9g14c4-bladimirs-projects-ed2af221.vercel.app"
+      "https://mercado-nica5.vercel.app",
+      "https://mercado-nica5-bladimirs-projects-ed2af221.vercel.app"
     ],
     "method": ["GET", "POST", "PUT"],
     "responseHeader": ["Content-Type"],
