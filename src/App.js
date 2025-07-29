@@ -152,35 +152,43 @@ export default function App() {
     const handleLogin = async () => { try { await signInWithPopup(auth, googleProvider); } catch (error) { console.error("Error al iniciar sesión con Google:", error); } };
     const handleLogout = () => { auth.signOut(); goHome(); };
     
+    // **INICIO DE LA CORRECCIÓN**
+    // Función de navegación a mensajes más robusta
     const navigateToMessages = async (chatInfo) => {
-        if (!auth.currentUser) {
+        const currentUserAuth = auth.currentUser;
+        if (!currentUserAuth) {
             alert("Debes iniciar sesión para enviar mensajes.");
             return;
         }
         
-        if (auth.currentUser.uid === chatInfo.recipientId) {
+        if (currentUserAuth.uid === chatInfo.recipientId) {
             alert("No puedes enviarte mensajes a ti mismo.");
             return;
         }
 
-        const chatId = [auth.currentUser.uid, chatInfo.recipientId].sort().join('_');
+        const chatId = [currentUserAuth.uid, chatInfo.recipientId].sort().join('_');
         const chatRef = doc(db, "chats", chatId);
         
         try {
             const chatDoc = await getDoc(chatRef);
 
             if (!chatDoc.exists()) {
+                // Usamos auth.currentUser para asegurar que la info del usuario actual esté siempre disponible
+                const currentUserData = {
+                    displayName: currentUserAuth.displayName || "Usuario Anónimo",
+                    photoURL: currentUserAuth.photoURL || `https://i.pravatar.cc/150?u=${currentUserAuth.uid}`
+                };
+
+                const recipientData = {
+                    displayName: chatInfo.recipientName,
+                    photoURL: chatInfo.recipientPhotoURL
+                };
+
                 await setDoc(chatRef, {
-                    participants: [auth.currentUser.uid, chatInfo.recipientId],
+                    participants: [currentUserAuth.uid, chatInfo.recipientId],
                     participantInfo: {
-                        [auth.currentUser.uid]: { 
-                            displayName: user.displayName, 
-                            photoURL: user.photoURL 
-                        },
-                        [chatInfo.recipientId]: { 
-                            displayName: chatInfo.recipientName, 
-                            photoURL: chatInfo.recipientPhotoURL 
-                        }
+                        [currentUserAuth.uid]: currentUserData,
+                        [chatInfo.recipientId]: recipientData
                     },
                     messages: [], 
                     createdAt: serverTimestamp(), 
@@ -189,7 +197,7 @@ export default function App() {
             }
             
             const finalChatDoc = await getDoc(chatRef);
-            const recipientId = finalChatDoc.data().participants.find(p => p !== auth.currentUser.uid);
+            const recipientId = finalChatDoc.data().participants.find(p => p !== currentUserAuth.uid);
             const recipientInfo = finalChatDoc.data().participantInfo[recipientId];
 
             setActiveChat({ id: finalChatDoc.id, ...finalChatDoc.data(), recipientInfo });
@@ -200,6 +208,7 @@ export default function App() {
             alert("Hubo un problema al iniciar la conversación. Inténtalo de nuevo.");
         }
     };
+    // **FIN DE LA CORRECCIÓN**
     
     const renderContent = () => {
         const { page } = currentView;
@@ -280,8 +289,6 @@ function ChatPage({ activeChat, setActiveChat, currentUser }) {
         }
     }, [newMessage]);
 
-    // **INICIO DE LA CORRECCIÓN**
-    // Esta es la consulta que debe coincidir con las reglas de seguridad.
     useEffect(() => {
         if (!currentUser) return;
         const q = query(
@@ -298,12 +305,10 @@ function ChatPage({ activeChat, setActiveChat, currentUser }) {
             });
             setConversations(convos);
         }, (error) => {
-            // Añadimos un log de error para ver problemas de permisos aquí.
             console.error("Error al obtener conversaciones: ", error);
         });
         return () => unsubscribe();
     }, [currentUser]);
-    // **FIN DE LA CORRECCIÓN**
 
     useEffect(() => {
         if (activeChat?.id) {
