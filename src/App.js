@@ -354,38 +354,7 @@ function ChatPage({ activeChat, setActiveChat, currentUser }) {
                     ))}
                 </ul>
             </div>
-            <div className={`w-full md:w-2/3 flex flex-col ${!activeChat && 'hidden md:flex'}`}>
-                {activeChat ? (
-                    <>
-                        <div className="p-4 border-b flex items-center">
-                            <button onClick={() => setActiveChat(null)} className="md:hidden mr-4 text-blue-600"><ArrowLeftIcon /></button>
-                            <img src={activeChat.recipientInfo?.photoURL || `https://i.pravatar.cc/150?u=${activeChat.id}`} alt={activeChat.recipientInfo?.displayName} className="w-10 h-10 rounded-full mr-3" />
-                            <h2 className="text-xl font-bold">{activeChat.recipientInfo?.displayName}</h2>
-                        </div>
-                        <div className="flex-1 p-4 overflow-y-auto bg-gray-50">
-                            {messages.map((msg, index) => (
-                                <div key={index} className={`flex ${msg.sender === currentUser.uid ? 'justify-end' : 'justify-start'} mb-4`}>
-                                    <div className={`max-w-xs md:max-w-md p-3 rounded-lg ${msg.sender === currentUser.uid ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}`}>
-                                        <p className="whitespace-pre-wrap break-words">{msg.text}</p>
-                                        <span className="text-xs opacity-75 mt-1 block text-right">{msg.createdAt?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                    </div>
-                                </div>
-                            ))}
-                            <div ref={messagesEndRef} />
-                        </div>
-                        <div className="p-4 border-t bg-white">
-                            <form onSubmit={handleSendMessage} className="flex items-end gap-2">
-                                <textarea ref={textareaRef} value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Escribe un mensaje..." className="flex-1 border-gray-300 rounded-lg p-2 resize-none" rows="1" />
-                                <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg self-end">Enviar</button>
-                            </form>
-                        </div>
-                    </>
-                ) : (
-                    <div className="flex items-center justify-center h-full text-gray-500 text-center p-4">
-                        Selecciona una conversación para empezar a chatear.
-                    </div>
-                )}
-            </div>
+            <div className={`w-full md:w-2/3 flex flex-col ${!activeChat && 'hidden md:flex'}`}>{activeChat ? ( <> <div className="p-4 border-b flex items-center"><button onClick={() => setActiveChat(null)} className="md:hidden mr-4 text-blue-600"><ArrowLeftIcon /></button><img src={activeChat.recipientInfo?.photoURL || `https://i.pravatar.cc/150?u=${activeChat.id}`} alt={activeChat.recipientInfo?.displayName} className="w-10 h-10 rounded-full mr-3" /><h2 className="text-xl font-bold">{activeChat.recipientInfo?.displayName}</h2></div><div className="flex-1 p-4 overflow-y-auto bg-gray-50">{messages.map((msg, index) => ( <div key={index} className={`flex ${msg.sender === currentUser.uid ? 'justify-end' : 'justify-start'} mb-4`}><div className={`max-w-xs md:max-w-md p-3 rounded-lg ${msg.sender === currentUser.uid ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}`}><p className="whitespace-pre-wrap break-words">{msg.text}</p><span className="text-xs opacity-75 mt-1 block text-right">{msg.createdAt?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div></div> ))}<div ref={messagesEndRef} /></div><div className="p-4 border-t bg-white"><form onSubmit={handleSendMessage} className="flex items-end gap-2"><textarea ref={textareaRef} value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Escribe un mensaje..." className="flex-1 border-gray-300 rounded-lg p-2 resize-none" rows="1" /><button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg self-end">Enviar</button></form></div> </> ) : ( <div className="flex items-center justify-center h-full text-gray-500 text-center p-4">Selecciona una conversación para empezar a chatear.</div> )}</div>
         </div>
     );
 }
