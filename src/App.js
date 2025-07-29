@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAnalytics, logEvent } from "firebase/analytics";
@@ -51,7 +50,6 @@ const productCategories = [ "Autos y Vehículos", "Motos", "Bienes Raíces", "Ce
 const jobCategories = [ "Administración y Oficina", "Atención al Cliente", "Call Center y Telemercadeo", "Compras y Comercio Exterior", "Construcción y Obra", "Diseño y Artes Gráficas", "Docencia", "Finanzas y Contabilidad", "Gerencia y Dirección", "Informática y Telecomunicaciones", "Logística y Almacén", "Mantenimiento y Reparaciones", "Marketing y Publicidad", "Medicina y Salud", "Producción y Operarios", "Recursos Humanos", "Servicios Generales y Aseo", "Turismo y Hostelería", "Ventas", "Otro" ].sort();
 
 // --- CONFIGURACIÓN DE FIREBASE ---
-// Asegúrate de tener tus variables de entorno configuradas en un archivo .env.local
 const firebaseConfig = {
     apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
     authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
@@ -85,7 +83,6 @@ const PlusCircleIcon = () => <svg className="w-8 h-8 text-white" fill="currentCo
 const ListingsIcon = ({isActive}) => <svg className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>;
 const AccountIcon = ({isActive}) => <svg className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
 const HeartIcon = ({ isFavorite, ...props }) => <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill={isFavorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5"><path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" /></svg>;
-// --- NUEVOS ICONOS ---
 const GearIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
 const DiamondIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.889 12.042l6.25-9.375a1.5 1.5 0 012.722 0l6.25 9.375a1.5 1.5 0 01-1.361 2.308H5.25a1.5 1.5 0 01-1.361-2.308z" /></svg>;
 const PublicProfileIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
@@ -94,7 +91,6 @@ const ShieldIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 
 const QuestionMarkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.546-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const ChevronRightIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>;
 const StarIcon = ({ filled }) => <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${filled ? 'text-yellow-400' : 'text-gray-300'}`} viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>;
-
 
 // --- COMPONENTE PARA SOLICITAR INICIO DE SESIÓN ---
 function PleaseLogIn({ onLogin }) {
@@ -133,8 +129,7 @@ export default function App() {
                         email: currentUser.email, 
                         photoURL: currentUser.photoURL, 
                         createdAt: serverTimestamp(),
-                        // Añadimos campos adicionales que usaremos en la nueva AccountPage
-                        location: "Managua, NI", // Ubicación por defecto
+                        location: "Managua, NI",
                         followers: 0,
                         following: 0,
                         rating: 0,
@@ -157,27 +152,23 @@ export default function App() {
     const handleLogin = async () => { try { await signInWithPopup(auth, googleProvider); } catch (error) { console.error("Error al iniciar sesión con Google:", error); } };
     const handleLogout = () => { auth.signOut(); goHome(); };
     
-    // --- FUNCIÓN DE NAVEGACIÓN A MENSAJES (CORREGIDA Y COMPLETADA) ---
     const navigateToMessages = async (chatInfo) => {
         if (!auth.currentUser) {
             alert("Debes iniciar sesión para enviar mensajes.");
             return;
         }
         
-        // Prevenir que un usuario inicie un chat consigo mismo
         if (auth.currentUser.uid === chatInfo.recipientId) {
             alert("No puedes enviarte mensajes a ti mismo.");
             return;
         }
 
-        // Crear un ID de chat único y consistente
         const chatId = [auth.currentUser.uid, chatInfo.recipientId].sort().join('_');
         const chatRef = doc(db, "chats", chatId);
         
         try {
             const chatDoc = await getDoc(chatRef);
 
-            // Si el chat no existe, créalo
             if (!chatDoc.exists()) {
                 await setDoc(chatRef, {
                     participants: [auth.currentUser.uid, chatInfo.recipientId],
@@ -197,12 +188,10 @@ export default function App() {
                 });
             }
             
-            // Obtener los datos del chat (ya sea existente o recién creado)
             const finalChatDoc = await getDoc(chatRef);
             const recipientId = finalChatDoc.data().participants.find(p => p !== auth.currentUser.uid);
             const recipientInfo = finalChatDoc.data().participantInfo[recipientId];
 
-            // Establecer el chat activo y navegar a la página de mensajes
             setActiveChat({ id: finalChatDoc.id, ...finalChatDoc.data(), recipientInfo });
             setView({ page: 'messages' });
 
@@ -224,7 +213,7 @@ export default function App() {
             case 'listings': return <ListingsPage type={currentView.type} setView={setView} user={user} />;
             case 'listingDetail': return <ListingDetailPage listingId={currentView.listingId} currentUser={user} navigateToMessages={navigateToMessages} setView={setView} />;
             case 'publish': return <PublishPage type={currentView.type} setView={setView} user={user} listingId={currentView.listingId} />;
-            case 'messages': return <ChatPage activeChat={activeChat} setActiveChat={setActiveChat} currentUser={user} setView={setView} />;
+            case 'messages': return <ChatPage activeChat={activeChat} setActiveChat={setActiveChat} currentUser={user} />;
             case 'account': return <AccountPage user={user} setView={setView} handleLogout={handleLogout} />;
             case 'accountSettings': return <AccountSettings user={user} setUser={setUser} />;
             case 'myListings': return <MyListings user={user} setView={setView} />;
@@ -246,7 +235,6 @@ export default function App() {
         <div className="min-h-screen font-sans bg-gray-100">
             <Header user={user} onLogin={handleLogin} onLogout={handleLogout} setView={setView} goHome={goHome} notificationCount={0} />
             <main className="container mx-auto pb-24 md:pb-8">
-                 {/* No renderizar el botón de volver en la página de cuenta para un look más limpio */}
                 {history.length > 1 && currentView.page !== 'account' && 
                     <div className="px-4 md:px-0">
                         <BackButton onClick={goBack} />
@@ -278,10 +266,125 @@ function AccountSettings({ user, setUser }) { const [displayName, setDisplayName
 function MyListings({ user, setView }) { const [myListings, setMyListings] = useState([]); const [loading, setLoading] = useState(true); const [showDeleteModal, setShowDeleteModal] = useState(null); const [showSoldModal, setShowSoldModal] = useState(null); useEffect(() => { if (!user) return; const q = query(collection(db, "listings"), where("userId", "==", user.uid), orderBy("createdAt", "desc")); const unsubscribe = onSnapshot(q, (snapshot) => { setMyListings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); setLoading(false); }); return () => unsubscribe(); }, [user]); const handleDelete = async (listingToDelete) => { if (!listingToDelete) return; try { if (listingToDelete.photos && listingToDelete.photos.length > 0) { const deletePromises = listingToDelete.photos.map(photo => { try { const fullRef = ref(storage, photo.full); const thumbRef = ref(storage, photo.thumb); return Promise.all([deleteObject(fullRef), deleteObject(thumbRef)]); } catch (e) { console.warn("No se pudo borrar la foto:", e.message); return Promise.resolve(); } }); await Promise.all(deletePromises); } await deleteDoc(doc(db, "listings", listingToDelete.id)); alert("Anuncio eliminado."); } catch (error) { console.error("Error eliminando:", error); alert("Error al eliminar."); } finally { setShowDeleteModal(null); } }; const handleMarkAsSold = async (listingToMark) => { if (!listingToMark) return; try { await updateDoc(doc(db, "listings", listingToMark.id), { status: 'sold' }); alert("Anuncio marcado como vendido."); } catch (error) { console.error("Error marcando como vendido:", error); alert("Error al actualizar."); } finally { setShowSoldModal(null); } }; return ( <> <div className="bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto"><h2 className="text-2xl font-bold mb-6">Mis Anuncios</h2>{loading ? <p>Cargando...</p> : !myListings.length ? <p>No has publicado nada.</p> : <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">{myListings.map(listing => ( <div key={listing.id} className={`border rounded-lg p-2 flex flex-col justify-between ${listing.status !== 'active' ? 'bg-gray-100 opacity-60' : ''}`}><div><img src={listing.photos?.[0]?.thumb || `https://placehold.co/600x400/e2e8f0/64748b?text=${listing.type}`} className="w-full h-32 object-cover rounded-md" /><h3 className="font-semibold truncate mt-2">{listing.title}</h3>{listing.status === 'sold' && <p className="text-sm font-bold text-green-600">VENDIDO</p>}</div><div className="flex gap-2 mt-2"><button onClick={() => setView({ page: 'publish', type: listing.type, listingId: listing.id })} className="w-full bg-blue-500 text-white text-sm font-semibold py-1 rounded-md hover:bg-blue-600">Editar</button>{listing.status === 'active' && listing.type === 'producto' && <button onClick={() => setShowSoldModal(listing)} className="w-full bg-green-500 text-white text-sm font-semibold py-1 rounded-md hover:bg-green-600">Vendido</button>}<button onClick={() => setShowDeleteModal(listing)} className="w-full bg-red-500 text-white text-sm font-semibold py-1 rounded-md hover:bg-red-600">Eliminar</button></div></div> ))}</div>}</div> {showDeleteModal && ( <ConfirmationModal message="¿Seguro que quieres eliminar este anuncio?" onConfirm={() => handleDelete(showDeleteModal)} onCancel={() => setShowDeleteModal(null)} /> )} {showSoldModal && ( <ConfirmationModal message="¿Marcar como vendido? No será visible en búsquedas." onConfirm={() => handleMarkAsSold(showSoldModal)} onCancel={() => setShowSoldModal(null)} /> )} </> ); }
 function FavoritesPage({ user, setView }) { const [favorites, setFavorites] = useState([]); const [loading, setLoading] = useState(true); useEffect(() => { if (!user) return; const q = query(collection(db, "users", user.uid, "favorites"), orderBy("addedAt", "desc")); const unsubscribe = onSnapshot(q, (snapshot) => { setFavorites(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); setLoading(false); }); return () => unsubscribe(); }, [user]); return ( <div className="container mx-auto"><h1 className="text-3xl font-bold mb-8">Mis Favoritos</h1>{loading ? <ListingsSkeleton /> : ( <> <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">{favorites.map(listing => <ListingCard key={listing.id} listing={listing} setView={setView} user={user} />)}</div> {!loading && favorites.length === 0 && <p className="text-center text-gray-500 mt-8">No has guardado favoritos.</p>} </> )}</div> ); }
 function ConfirmationModal({ message, onConfirm, onCancel }) { return ( <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"><div className="bg-white rounded-lg p-6 max-w-sm mx-4"><p className="text-lg mb-4">{message}</p><div className="flex justify-end gap-4"><button onClick={onCancel} className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300">Cancelar</button><button onClick={onConfirm} className="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600">Confirmar</button></div></div></div> ); }
-function ChatPage({ activeChat, setActiveChat, currentUser, setView }) { const [conversations, setConversations] = useState([]); const [messages, setMessages] = useState([]); const [newMessage, setNewMessage] = useState(''); const messagesEndRef = useRef(null); const textareaRef = useRef(null); useEffect(() => { if (textareaRef.current) { textareaRef.current.style.height = 'auto'; textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`; } }, [newMessage]); useEffect(() => { if (!currentUser) return; const q = query(collection(db, "chats"), where("participants", "array-contains", currentUser.uid), orderBy("updatedAt", "desc")); const unsubscribe = onSnapshot(q, (snapshot) => { const convos = snapshot.docs.map(doc => { const data = doc.data(); const recipientId = data.participants.find(p => p !== currentUser.uid); const recipientInfo = data.participantInfo[recipientId] || { displayName: 'Usuario Desconocido' }; return { id: doc.id, ...data, recipientInfo }; }); setConversations(convos); }); return () => unsubscribe(); }, [currentUser]); useEffect(() => { if (activeChat?.id) { const chatRef = doc(db, "chats", activeChat.id); const unsubscribe = onSnapshot(chatRef, (doc) => { if (doc.exists()) { setMessages(doc.data().messages || []); } }); return () => unsubscribe(); } }, [activeChat]); useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]); const handleSendMessage = async (e) => { e.preventDefault(); if (newMessage.trim() === '' || !activeChat || !currentUser) return; const chatRef = doc(db, "chats", activeChat.id); const currentMessages = (await getDoc(chatRef)).data().messages || []; const messageData = { text: newMessage, sender: currentUser.uid, createdAt: new Date() }; await updateDoc(chatRef, { messages: [...currentMessages, messageData], updatedAt: serverTimestamp() }); setNewMessage(''); }; return ( <div className="flex h-[75vh] bg-white rounded-lg shadow-lg"><div className={`w-full md:w-1/3 border-r ${activeChat && 'hidden md:block'}`}><div className="p-4 border-b"><h2 className="text-xl font-bold">Conversaciones</h2></div><ul className="overflow-y-auto h-[calc(75vh-65px)]">{conversations.map(convo => ( <li key={convo.id} onClick={() => setActiveChat(convo)} className={`p-4 cursor-pointer hover:bg-gray-100 flex items-center space-x-3 ${activeChat?.id === convo.id ? 'bg-blue-100' : ''}`}><img src={convo.recipientInfo?.photoURL || `https://i.pravatar.cc/150?u=${convo.id}`} alt={convo.recipientInfo?.displayName} className="w-10 h-10 rounded-full" /><p className="font-semibold">{convo.recipientInfo?.displayName}</p></li> ))}</ul></div><div className={`w-full md:w-2/3 flex flex-col ${!activeChat && 'hidden md:flex'}`}>{activeChat ? ( <> <div className="p-4 border-b flex items-center"><button onClick={() => setActiveChat(null)} className="md:hidden mr-4 text-blue-600"><ArrowLeftIcon /></button><img src={activeChat.recipientInfo?.photoURL || `https://i.pravatar.cc/150?u=${activeChat.id}`} alt={activeChat.recipientInfo?.displayName} className="w-10 h-10 rounded-full mr-3" /><h2 className="text-xl font-bold">{activeChat.recipientInfo?.displayName}</h2></div><div className="flex-1 p-4 overflow-y-auto bg-gray-50">{messages.map((msg, index) => ( <div key={index} className={`flex ${msg.sender === currentUser.uid ? 'justify-end' : 'justify-start'} mb-4`}><div className={`max-w-xs md:max-w-md p-3 rounded-lg ${msg.sender === currentUser.uid ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}`}><p className="whitespace-pre-wrap break-words">{msg.text}</p><span className="text-xs opacity-75 mt-1 block text-right">{msg.createdAt?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div></div> ))}<div ref={messagesEndRef} /></div><div className="p-4 border-t bg-white"><form onSubmit={handleSendMessage} className="flex items-end gap-2"><textarea ref={textareaRef} value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Escribe un mensaje..." className="flex-1 border-gray-300 rounded-lg p-2 resize-none" rows="1" /><button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg self-end">Enviar</button></form></div> </> ) : ( <div className="flex items-center justify-center h-full text-gray-500 text-center p-4">Selecciona una conversación para empezar a chatear.</div> )}</div></div> ); }
-function AdminDashboard() { const [stats, setStats] = useState({ users: 0, listings: 0 }); const [loading, setLoading] = useState(true); useEffect(() => { const fetchStats = async () => { try { const usersColl = collection(db, "users"); const listingsColl = collection(db, "listings"); const userSnapshot = await getCountFromServer(usersColl); const listingSnapshot = await getCountFromServer(listingsColl); setStats({ users: userSnapshot.data().count, listings: listingSnapshot.data().count, }); } catch (error) { console.error("Error fetching stats:", error); } finally { setLoading(false); } }; fetchStats(); }, []); return ( <div className="container mx-auto"><h1 className="text-3xl font-bold mb-8">Panel de Administrador</h1>{loading ? ( <p>Cargando estadísticas...</p> ) : ( <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="bg-white p-6 rounded-lg shadow-md text-center"><h2 className="text-xl font-semibold text-gray-600">Usuarios Totales</h2><p className="text-4xl font-bold mt-2">{stats.users}</p></div><div className="bg-white p-6 rounded-lg shadow-md text-center"><h2 className="text-xl font-semibold text-gray-600">Anuncios Totales</h2><p className="text-4xl font-bold mt-2">{stats.listings}</p></div></div> )}</div> ); }
+function ChatPage({ activeChat, setActiveChat, currentUser }) { 
+    const [conversations, setConversations] = useState([]);
+    const [messages, setMessages] = useState([]);
+    const [newMessage, setNewMessage] = useState('');
+    const messagesEndRef = useRef(null);
+    const textareaRef = useRef(null);
 
-// --- NUEVO COMPONENTE DE PÁGINA DE CUENTA ---
+    useEffect(() => {
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+        }
+    }, [newMessage]);
+
+    // **INICIO DE LA CORRECCIÓN**
+    // Esta es la consulta que debe coincidir con las reglas de seguridad.
+    useEffect(() => {
+        if (!currentUser) return;
+        const q = query(
+            collection(db, "chats"), 
+            where("participants", "array-contains", currentUser.uid), 
+            orderBy("updatedAt", "desc")
+        );
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const convos = snapshot.docs.map(doc => {
+                const data = doc.data();
+                const recipientId = data.participants.find(p => p !== currentUser.uid);
+                const recipientInfo = data.participantInfo[recipientId] || { displayName: 'Usuario Desconocido' };
+                return { id: doc.id, ...data, recipientInfo };
+            });
+            setConversations(convos);
+        }, (error) => {
+            // Añadimos un log de error para ver problemas de permisos aquí.
+            console.error("Error al obtener conversaciones: ", error);
+        });
+        return () => unsubscribe();
+    }, [currentUser]);
+    // **FIN DE LA CORRECCIÓN**
+
+    useEffect(() => {
+        if (activeChat?.id) {
+            const chatRef = doc(db, "chats", activeChat.id);
+            const unsubscribe = onSnapshot(chatRef, (doc) => {
+                if (doc.exists()) {
+                    setMessages(doc.data().messages || []);
+                }
+            });
+            return () => unsubscribe();
+        }
+    }, [activeChat]);
+
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [messages]);
+
+    const handleSendMessage = async (e) => {
+        e.preventDefault();
+        if (newMessage.trim() === '' || !activeChat || !currentUser) return;
+        const chatRef = doc(db, "chats", activeChat.id);
+        const currentMessages = (await getDoc(chatRef)).data().messages || [];
+        const messageData = { text: newMessage, sender: currentUser.uid, createdAt: new Date() };
+        await updateDoc(chatRef, {
+            messages: [...currentMessages, messageData],
+            updatedAt: serverTimestamp()
+        });
+        setNewMessage('');
+    };
+
+    return (
+        <div className="flex h-[75vh] bg-white rounded-lg shadow-lg">
+            <div className={`w-full md:w-1/3 border-r ${activeChat && 'hidden md:block'}`}>
+                <div className="p-4 border-b">
+                    <h2 className="text-xl font-bold">Conversaciones</h2>
+                </div>
+                <ul className="overflow-y-auto h-[calc(75vh-65px)]">
+                    {conversations.map(convo => (
+                        <li key={convo.id} onClick={() => setActiveChat(convo)} className={`p-4 cursor-pointer hover:bg-gray-100 flex items-center space-x-3 ${activeChat?.id === convo.id ? 'bg-blue-100' : ''}`}>
+                            <img src={convo.recipientInfo?.photoURL || `https://i.pravatar.cc/150?u=${convo.id}`} alt={convo.recipientInfo?.displayName} className="w-10 h-10 rounded-full" />
+                            <p className="font-semibold">{convo.recipientInfo?.displayName}</p>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+            <div className={`w-full md:w-2/3 flex flex-col ${!activeChat && 'hidden md:flex'}`}>
+                {activeChat ? (
+                    <>
+                        <div className="p-4 border-b flex items-center">
+                            <button onClick={() => setActiveChat(null)} className="md:hidden mr-4 text-blue-600"><ArrowLeftIcon /></button>
+                            <img src={activeChat.recipientInfo?.photoURL || `https://i.pravatar.cc/150?u=${activeChat.id}`} alt={activeChat.recipientInfo?.displayName} className="w-10 h-10 rounded-full mr-3" />
+                            <h2 className="text-xl font-bold">{activeChat.recipientInfo?.displayName}</h2>
+                        </div>
+                        <div className="flex-1 p-4 overflow-y-auto bg-gray-50">
+                            {messages.map((msg, index) => (
+                                <div key={index} className={`flex ${msg.sender === currentUser.uid ? 'justify-end' : 'justify-start'} mb-4`}>
+                                    <div className={`max-w-xs md:max-w-md p-3 rounded-lg ${msg.sender === currentUser.uid ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}`}>
+                                        <p className="whitespace-pre-wrap break-words">{msg.text}</p>
+                                        <span className="text-xs opacity-75 mt-1 block text-right">{msg.createdAt?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    </div>
+                                </div>
+                            ))}
+                            <div ref={messagesEndRef} />
+                        </div>
+                        <div className="p-4 border-t bg-white">
+                            <form onSubmit={handleSendMessage} className="flex items-end gap-2">
+                                <textarea ref={textareaRef} value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Escribe un mensaje..." className="flex-1 border-gray-300 rounded-lg p-2 resize-none" rows="1" />
+                                <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg self-end">Enviar</button>
+                            </form>
+                        </div>
+                    </>
+                ) : (
+                    <div className="flex items-center justify-center h-full text-gray-500 text-center p-4">
+                        Selecciona una conversación para empezar a chatear.
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+function AdminDashboard() { const [stats, setStats] = useState({ users: 0, listings: 0 }); const [loading, setLoading] = useState(true); useEffect(() => { const fetchStats = async () => { try { const usersColl = collection(db, "users"); const listingsColl = collection(db, "listings"); const userSnapshot = await getCountFromServer(usersColl); const listingSnapshot = await getCountFromServer(listingsColl); setStats({ users: userSnapshot.data().count, listings: listingSnapshot.data().count, }); } catch (error) { console.error("Error fetching stats:", error); } finally { setLoading(false); } }; fetchStats(); }, []); return ( <div className="container mx-auto"><h1 className="text-3xl font-bold mb-8">Panel de Administrador</h1>{loading ? ( <p>Cargando estadísticas...</p> ) : ( <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="bg-white p-6 rounded-lg shadow-md text-center"><h2 className="text-xl font-semibold text-gray-600">Usuarios Totales</h2><p className="text-4xl font-bold mt-2">{stats.users}</p></div><div className="bg-white p-6 rounded-lg shadow-md text-center"><h2 className="text-xl font-semibold text-gray-600">Anuncios Totales</h2><p className="text-4xl font-bold mt-2">{stats.listings}</p></div></div> )}</div> ); }
 function AccountPage({ user, setView, handleLogout }) {
     if (!user) return <p>Cargando perfil...</p>;
 
@@ -301,8 +404,6 @@ function AccountPage({ user, setView, handleLogout }) {
         <div className="bg-gray-900 text-white min-h-screen -m-4 md:-m-8">
             <div className="p-4 max-w-3xl mx-auto">
                 <h1 className="text-xl font-bold text-center py-4 md:hidden">Cuenta</h1>
-
-                {/* --- BLOQUE DE PERFIL DE USUARIO --- */}
                 <div className="flex items-center space-x-4 p-4">
                     <img src={user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`} alt="Perfil" className="w-16 h-16 rounded-full" />
                     <div className="flex-1">
@@ -318,8 +419,6 @@ function AccountPage({ user, setView, handleLogout }) {
                         </div>
                     </div>
                 </div>
-
-                {/* --- BANNER PREMIUM --- */}
                  <div onClick={handleNotImplemented} className="mx-4 my-4 p-3 bg-gray-800 rounded-lg flex justify-between items-center cursor-pointer hover:bg-gray-700 transition-colors">
                     <div className="flex items-center space-x-3">
                         <DiamondIcon />
@@ -327,16 +426,12 @@ function AccountPage({ user, setView, handleLogout }) {
                     </div>
                     <ChevronRightIcon />
                 </div>
-
-                {/* --- SECCIÓN GUARDADOS --- */}
                 <div className="px-4 mt-6">
                     <h3 className="text-gray-400 font-bold mb-2 text-sm uppercase">Guardados</h3>
                     <div className="bg-gray-800 rounded-lg">
                         <MenuItem icon={<HeartIcon isFavorite={true} className="w-6 h-6 text-gray-400"/>} label="Artículos guardados" onClick={() => setView({ page: 'favorites' })} />
                     </div>
                 </div>
-
-                {/* --- SECCIÓN CUENTA --- */}
                 <div className="px-4 mt-6">
                     <h3 className="text-gray-400 font-bold mb-2 text-sm uppercase">Cuenta</h3>
                     <div className="bg-gray-800 rounded-lg">
@@ -346,16 +441,12 @@ function AccountPage({ user, setView, handleLogout }) {
                         <MenuItem icon={<ShieldIcon />} label="Términos y Políticas" onClick={handleNotImplemented} />
                     </div>
                 </div>
-
-                {/* --- SECCIÓN AYUDA --- */}
                 <div className="px-4 mt-6">
                     <h3 className="text-gray-400 font-bold mb-2 text-sm uppercase">Ayuda</h3>
                     <div className="bg-gray-800 rounded-lg">
                         <MenuItem icon={<QuestionMarkIcon />} label="Centro de ayuda" onClick={handleNotImplemented} />
                     </div>
                 </div>
-
-                {/* --- BOTÓN CERRAR SESIÓN --- */}
                 <div className="px-4 mt-8 text-center">
                     <button onClick={handleLogout} className="text-red-400 hover:text-red-300 font-semibold">
                         Cerrar Sesión
@@ -366,7 +457,6 @@ function AccountPage({ user, setView, handleLogout }) {
     );
 }
 
-// Componente de ayuda para los elementos del menú
 function MenuItem({ icon, label, onClick }) {
     return (
         <div onClick={onClick} className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-700 transition-colors border-b border-gray-700 last:border-b-0 first:rounded-t-lg last:rounded-b-lg">
