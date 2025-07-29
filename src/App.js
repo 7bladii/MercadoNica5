@@ -78,7 +78,7 @@ const ArrowLeftIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h
 const CameraIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
 const SpinnerIcon = () => <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
 const HomeIcon = ({isActive}) => <svg className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>;
-const MessagesIcon = ({isActive}) => <svg className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>;
+const MessagesIcon = ({isActive, hasNotification}) => <div className="relative"><svg className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>{hasNotification && <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500"></span>}</div>;
 const PlusCircleIcon = () => <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" /></svg>;
 const ListingsIcon = ({isActive}) => <svg className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>;
 const AccountIcon = ({isActive}) => <svg className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
@@ -114,6 +114,7 @@ export default function App() {
     const [history, setHistory] = useState([{ page: 'home' }]);
     const [activeChat, setActiveChat] = useState(null);
     const [authLoading, setAuthLoading] = useState(true);
+    const [unreadChats, setUnreadChats] = useState({});
     const currentView = history[history.length - 1];
 
     useEffect(() => {
@@ -134,6 +135,10 @@ export default function App() {
                         following: 0,
                         rating: 0,
                         ratingCount: 0,
+                        notifications: {
+                            newMessages: true,
+                            newJobs: true
+                        }
                     };
                     await setDoc(userDocRef, newUserProfile);
                     setUser({ uid: currentUser.uid, ...newUserProfile });
@@ -152,8 +157,6 @@ export default function App() {
     const handleLogin = async () => { try { await signInWithPopup(auth, googleProvider); } catch (error) { console.error("Error al iniciar sesión con Google:", error); } };
     const handleLogout = () => { auth.signOut(); goHome(); };
     
-    // **INICIO DE LA CORRECCIÓN**
-    // Función de navegación a mensajes más robusta
     const navigateToMessages = async (chatInfo) => {
         const currentUserAuth = auth.currentUser;
         if (!currentUserAuth) {
@@ -173,7 +176,6 @@ export default function App() {
             const chatDoc = await getDoc(chatRef);
 
             if (!chatDoc.exists()) {
-                // Usamos auth.currentUser para asegurar que la info del usuario actual esté siempre disponible
                 const currentUserData = {
                     displayName: currentUserAuth.displayName || "Usuario Anónimo",
                     photoURL: currentUserAuth.photoURL || `https://i.pravatar.cc/150?u=${currentUserAuth.uid}`
@@ -193,6 +195,7 @@ export default function App() {
                     messages: [], 
                     createdAt: serverTimestamp(), 
                     updatedAt: serverTimestamp(),
+                    lastRead: {}
                 });
             }
             
@@ -208,11 +211,10 @@ export default function App() {
             alert("Hubo un problema al iniciar la conversación. Inténtalo de nuevo.");
         }
     };
-    // **FIN DE LA CORRECCIÓN**
     
     const renderContent = () => {
         const { page } = currentView;
-        const protectedPages = ['account', 'accountSettings', 'myListings', 'favorites', 'messages', 'publish', 'adminDashboard'];
+        const protectedPages = ['account', 'accountSettings', 'myListings', 'favorites', 'messages', 'publish', 'adminDashboard', 'notificationPreferences'];
 
         if (protectedPages.includes(page) && !user) {
             return <PleaseLogIn onLogin={handleLogin} />;
@@ -222,12 +224,13 @@ export default function App() {
             case 'listings': return <ListingsPage type={currentView.type} setView={setView} user={user} />;
             case 'listingDetail': return <ListingDetailPage listingId={currentView.listingId} currentUser={user} navigateToMessages={navigateToMessages} setView={setView} />;
             case 'publish': return <PublishPage type={currentView.type} setView={setView} user={user} listingId={currentView.listingId} />;
-            case 'messages': return <ChatPage activeChat={activeChat} setActiveChat={setActiveChat} currentUser={user} />;
+            case 'messages': return <ChatPage activeChat={activeChat} setActiveChat={setActiveChat} currentUser={user} setUnreadChats={setUnreadChats} unreadChats={unreadChats} />;
             case 'account': return <AccountPage user={user} setView={setView} handleLogout={handleLogout} />;
             case 'accountSettings': return <AccountSettings user={user} setUser={setUser} />;
             case 'myListings': return <MyListings user={user} setView={setView} />;
             case 'favorites': return <FavoritesPage user={user} setView={setView} />;
             case 'adminDashboard': return <AdminDashboard />;
+            case 'notificationPreferences': return <NotificationPreferences user={user} setUser={setUser} />;
             default: return <HomePage setView={setView} />;
         }
     };
@@ -242,7 +245,7 @@ export default function App() {
 
     return (
         <div className="min-h-screen font-sans bg-gray-100">
-            <Header user={user} onLogin={handleLogin} onLogout={handleLogout} setView={setView} goHome={goHome} notificationCount={0} />
+            <Header user={user} onLogin={handleLogin} onLogout={handleLogout} setView={setView} goHome={goHome} notificationCount={Object.values(unreadChats).filter(Boolean).length} />
             <main className="container mx-auto pb-24 md:pb-8">
                 {history.length > 1 && currentView.page !== 'account' && 
                     <div className="px-4 md:px-0">
@@ -253,7 +256,7 @@ export default function App() {
                     {renderContent()}
                 </div>
             </main>
-            <BottomNavBar setView={setView} currentView={currentView} goHome={goHome} />
+            <BottomNavBar setView={setView} currentView={currentView} goHome={goHome} hasUnreadMessages={Object.values(unreadChats).filter(Boolean).length > 0} />
             <Footer />
         </div>
     );
@@ -263,7 +266,7 @@ export default function App() {
 function BackButton({ onClick }) { return ( <button onClick={onClick} className="flex items-center text-gray-600 hover:text-gray-900 font-semibold mb-4"><ArrowLeftIcon /> Volver</button> ); }
 function Header({ user, onLogin, onLogout, setView, goHome, notificationCount }) { return ( <header className="bg-white/80 backdrop-blur-sm shadow-md sticky top-0 z-50 hidden md:block"><nav className="container mx-auto px-4 py-3 flex justify-between items-center"><div className="flex items-center cursor-pointer" onClick={goHome}><span className="text-2xl font-bold text-blue-600">Mercado<span className="text-sky-500">Nica</span></span></div><div className="flex items-center space-x-4">{user && user.uid === ADMIN_UID && <button onClick={() => setView({ page: 'adminDashboard' })} className="text-sm font-semibold text-blue-600 hover:underline">Admin</button>}{user && <div className="cursor-pointer" onClick={() => setView({ page: 'messages' })}><BellIcon hasNotification={notificationCount > 0} /></div>}{user ? (<div className="relative group"><img src={user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`} alt="Perfil" className="w-10 h-10 rounded-full cursor-pointer" /><div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-20 hidden group-hover:block"><span className="block px-4 py-2 text-sm text-gray-700 font-semibold truncate">{user.displayName}</span><a href="#" onClick={(e) => {e.preventDefault(); setView({ page: 'account' })}} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Mi Cuenta</a><a href="#" onClick={(e) => {e.preventDefault(); onLogout()}} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cerrar Sesión</a></div></div>) : ( <button onClick={onLogin} className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">Iniciar Sesión</button> )}</div></nav></header> ); }
 function Footer() { return ( <footer className="bg-white/80 backdrop-blur-sm mt-12 py-6 border-t hidden md:block"><div className="container mx-auto text-center text-gray-600"><p>&copy; {new Date().getFullYear()} MercadoNica. Todos los derechos reservados.</p></div></footer> ); }
-function BottomNavBar({ setView, currentView, goHome }) { const handlePublishClick = () => { setView({ page: 'publish', type: 'producto' }) }; const navItems = [ { name: 'Inicio', icon: HomeIcon, page: 'home', action: goHome }, { name: 'Mensajes', icon: MessagesIcon, page: 'messages', action: () => setView({ page: 'messages' }) }, { name: 'Publicar', icon: PlusCircleIcon, page: 'publish', action: handlePublishClick, isCentral: true }, { name: 'Anuncios', icon: ListingsIcon, page: 'myListings', action: () => setView({ page: 'myListings' }) }, { name: 'Cuenta', icon: AccountIcon, page: 'account', action: () => setView({ page: 'account' }) }, ]; return ( <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-t shadow-lg z-50"><div className="flex justify-around items-center h-16">{navItems.map(item => { const isActive = item.page === 'account' ? ['account', 'accountSettings', 'myListings', 'favorites'].includes(currentView.page) : currentView.page === item.page; const Icon = item.icon; if (item.isCentral) { return ( <button key={item.name} onClick={item.action} className="bg-blue-600 rounded-full w-14 h-14 flex items-center justify-center -mt-6 shadow-lg"><Icon /></button> ); } return ( <button key={item.name} onClick={item.action} className="flex flex-col items-center justify-center text-xs w-16"><Icon isActive={isActive} /><span className={`mt-1 truncate ${isActive ? 'text-blue-600' : 'text-gray-500'}`}>{item.name}</span></button> ); })}</div></div> ); }
+function BottomNavBar({ setView, currentView, goHome, hasUnreadMessages }) { const handlePublishClick = () => { setView({ page: 'publish', type: 'producto' }) }; const navItems = [ { name: 'Inicio', icon: HomeIcon, page: 'home', action: goHome }, { name: 'Mensajes', icon: MessagesIcon, page: 'messages', action: () => setView({ page: 'messages' }), notification: hasUnreadMessages }, { name: 'Publicar', icon: PlusCircleIcon, page: 'publish', action: handlePublishClick, isCentral: true }, { name: 'Anuncios', icon: ListingsIcon, page: 'myListings', action: () => setView({ page: 'myListings' }) }, { name: 'Cuenta', icon: AccountIcon, page: 'account', action: () => setView({ page: 'account' }) }, ]; return ( <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-t shadow-lg z-50"><div className="flex justify-around items-center h-16">{navItems.map(item => { const isActive = item.page === 'account' ? ['account', 'accountSettings', 'myListings', 'favorites', 'notificationPreferences'].includes(currentView.page) : currentView.page === item.page; const Icon = item.icon; if (item.isCentral) { return ( <button key={item.name} onClick={item.action} className="bg-blue-600 rounded-full w-14 h-14 flex items-center justify-center -mt-6 shadow-lg"><Icon /></button> ); } return ( <button key={item.name} onClick={item.action} className="flex flex-col items-center justify-center text-xs w-16"><Icon isActive={isActive} hasNotification={item.notification} /><span className={`mt-1 truncate ${isActive ? 'text-blue-600' : 'text-gray-500'}`}>{item.name}</span></button> ); })}</div></div> ); }
 function HomePage({ setView }) { const [recentListings, setRecentListings] = useState([]); const [loading, setLoading] = useState(true); useEffect(() => { const q = query( collection(db, "listings"), where("type", "==", "producto"), where("status", "==", "active"), orderBy("createdAt", "desc"), limit(8) ); const unsubscribe = onSnapshot(q, (snapshot) => { const listingsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); setRecentListings(listingsData); setLoading(false); }); return () => unsubscribe(); }, []); return ( <div className="container mx-auto"><div className="bg-white p-6 rounded-lg shadow-lg mb-8 text-center"><h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">Bienvenido a MercadoNica</h1><p className="text-gray-600 text-lg">Tu plataforma para comprar, vender y encontrar empleo en Nicaragua.</p></div><div onClick={() => setView({ page: 'listings', type: 'trabajo' })} className="bg-blue-600 text-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow cursor-pointer flex items-center justify-between mb-12"><div><h2 className="text-2xl font-bold">¿Buscas Empleo?</h2><p className="opacity-90">Explora las últimas vacantes o publica una oferta.</p></div><BriefcaseIcon className="h-12 w-12 text-white opacity-80" /></div><div className="mb-12"><h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Artículos Recientes</h2>{loading ? <ListingsSkeleton /> : ( <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">{recentListings.map(listing => <ListingCard key={listing.id} listing={listing} setView={setView} user={null} />)}</div> )}<div className="text-center mt-8"><button onClick={() => setView({ page: 'listings', type: 'producto' })} className="bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">Ver todos los artículos</button></div></div></div> ); }
 function ListingsPage({ type, setView, user }) { const [allListings, setAllListings] = useState([]); const [filteredListings, setFilteredListings] = useState([]); const [loading, setLoading] = useState(true); const [searchTerm, setSearchTerm] = useState(''); const [selectedCity, setSelectedCity] = useState(''); const [selectedCategory, setSelectedCategory] = useState(''); const pageTitle = type === 'producto' ? 'Artículos en Venta' : 'Ofertas de Empleo'; const publishButtonText = type === 'producto' ? 'Vender Artículo' : 'Publicar Empleo'; const categories = type === 'producto' ? productCategories : jobCategories; useEffect(() => { setLoading(true); const q = query( collection(db, "listings"), where("type", "==", type), where("status", "==", "active"), orderBy("createdAt", "desc") ); const unsubscribe = onSnapshot(q, (snapshot) => { const listingsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); setAllListings(listingsData); setFilteredListings(listingsData); setLoading(false); }, (error) => { console.error("Error fetching listings:", error); setLoading(false); }); return () => unsubscribe(); }, [type]); useEffect(() => { let result = allListings; if (searchTerm) { result = result.filter(listing => listing.title.toLowerCase().includes(searchTerm.toLowerCase())); } if (selectedCity) { result = result.filter(listing => listing.location === selectedCity); } if (selectedCategory) { result = result.filter(listing => listing.category === selectedCategory); } setFilteredListings(result); }, [searchTerm, selectedCity, selectedCategory, allListings]); return ( <div className="container mx-auto"><div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4"><h1 className="text-3xl font-bold">{pageTitle}</h1><div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto"><input type="text" placeholder="Buscar por título..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="border-gray-300 rounded-md shadow-sm w-full sm:w-auto" /><select value={selectedCity} onChange={e => setSelectedCity(e.target.value)} className="border-gray-300 rounded-md shadow-sm w-full sm:w-auto"><option value="">Todas las Ciudades</option>{nicaraguaCities.map(city => <option key={city} value={city}>{city}</option>)}</select><select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="border-gray-300 rounded-md shadow-sm w-full sm:w-auto"><option value="">Todas las Categorías</option>{categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}</select></div><button onClick={() => setView({ page: 'publish', type: type })} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 w-full md:w-auto">{publishButtonText}</button></div>{loading ? <ListingsSkeleton /> : ( <> <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">{filteredListings.map(listing => <ListingCard key={listing.id} listing={listing} setView={setView} user={user} />)}</div> {!loading && filteredListings.length === 0 && <p className="text-center text-gray-500 mt-8">No se encontraron anuncios que coincidan con tu búsqueda.</p>} </> )}</div> ); }
 function ListingsSkeleton() { return ( <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">{Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}</div> ); }
@@ -275,7 +278,7 @@ function AccountSettings({ user, setUser }) { const [displayName, setDisplayName
 function MyListings({ user, setView }) { const [myListings, setMyListings] = useState([]); const [loading, setLoading] = useState(true); const [showDeleteModal, setShowDeleteModal] = useState(null); const [showSoldModal, setShowSoldModal] = useState(null); useEffect(() => { if (!user) return; const q = query(collection(db, "listings"), where("userId", "==", user.uid), orderBy("createdAt", "desc")); const unsubscribe = onSnapshot(q, (snapshot) => { setMyListings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); setLoading(false); }); return () => unsubscribe(); }, [user]); const handleDelete = async (listingToDelete) => { if (!listingToDelete) return; try { if (listingToDelete.photos && listingToDelete.photos.length > 0) { const deletePromises = listingToDelete.photos.map(photo => { try { const fullRef = ref(storage, photo.full); const thumbRef = ref(storage, photo.thumb); return Promise.all([deleteObject(fullRef), deleteObject(thumbRef)]); } catch (e) { console.warn("No se pudo borrar la foto:", e.message); return Promise.resolve(); } }); await Promise.all(deletePromises); } await deleteDoc(doc(db, "listings", listingToDelete.id)); alert("Anuncio eliminado."); } catch (error) { console.error("Error eliminando:", error); alert("Error al eliminar."); } finally { setShowDeleteModal(null); } }; const handleMarkAsSold = async (listingToMark) => { if (!listingToMark) return; try { await updateDoc(doc(db, "listings", listingToMark.id), { status: 'sold' }); alert("Anuncio marcado como vendido."); } catch (error) { console.error("Error marcando como vendido:", error); alert("Error al actualizar."); } finally { setShowSoldModal(null); } }; return ( <> <div className="bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto"><h2 className="text-2xl font-bold mb-6">Mis Anuncios</h2>{loading ? <p>Cargando...</p> : !myListings.length ? <p>No has publicado nada.</p> : <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">{myListings.map(listing => ( <div key={listing.id} className={`border rounded-lg p-2 flex flex-col justify-between ${listing.status !== 'active' ? 'bg-gray-100 opacity-60' : ''}`}><div><img src={listing.photos?.[0]?.thumb || `https://placehold.co/600x400/e2e8f0/64748b?text=${listing.type}`} className="w-full h-32 object-cover rounded-md" /><h3 className="font-semibold truncate mt-2">{listing.title}</h3>{listing.status === 'sold' && <p className="text-sm font-bold text-green-600">VENDIDO</p>}</div><div className="flex gap-2 mt-2"><button onClick={() => setView({ page: 'publish', type: listing.type, listingId: listing.id })} className="w-full bg-blue-500 text-white text-sm font-semibold py-1 rounded-md hover:bg-blue-600">Editar</button>{listing.status === 'active' && listing.type === 'producto' && <button onClick={() => setShowSoldModal(listing)} className="w-full bg-green-500 text-white text-sm font-semibold py-1 rounded-md hover:bg-green-600">Vendido</button>}<button onClick={() => setShowDeleteModal(listing)} className="w-full bg-red-500 text-white text-sm font-semibold py-1 rounded-md hover:bg-red-600">Eliminar</button></div></div> ))}</div>}</div> {showDeleteModal && ( <ConfirmationModal message="¿Seguro que quieres eliminar este anuncio?" onConfirm={() => handleDelete(showDeleteModal)} onCancel={() => setShowDeleteModal(null)} /> )} {showSoldModal && ( <ConfirmationModal message="¿Marcar como vendido? No será visible en búsquedas." onConfirm={() => handleMarkAsSold(showSoldModal)} onCancel={() => setShowSoldModal(null)} /> )} </> ); }
 function FavoritesPage({ user, setView }) { const [favorites, setFavorites] = useState([]); const [loading, setLoading] = useState(true); useEffect(() => { if (!user) return; const q = query(collection(db, "users", user.uid, "favorites"), orderBy("addedAt", "desc")); const unsubscribe = onSnapshot(q, (snapshot) => { setFavorites(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); setLoading(false); }); return () => unsubscribe(); }, [user]); return ( <div className="container mx-auto"><h1 className="text-3xl font-bold mb-8">Mis Favoritos</h1>{loading ? <ListingsSkeleton /> : ( <> <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">{favorites.map(listing => <ListingCard key={listing.id} listing={listing} setView={setView} user={user} />)}</div> {!loading && favorites.length === 0 && <p className="text-center text-gray-500 mt-8">No has guardado favoritos.</p>} </> )}</div> ); }
 function ConfirmationModal({ message, onConfirm, onCancel }) { return ( <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"><div className="bg-white rounded-lg p-6 max-w-sm mx-4"><p className="text-lg mb-4">{message}</p><div className="flex justify-end gap-4"><button onClick={onCancel} className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300">Cancelar</button><button onClick={onConfirm} className="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600">Confirmar</button></div></div></div> ); }
-function ChatPage({ activeChat, setActiveChat, currentUser }) { 
+function ChatPage({ activeChat, setActiveChat, currentUser, setUnreadChats, unreadChats }) { 
     const [conversations, setConversations] = useState([]);
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
@@ -297,18 +300,33 @@ function ChatPage({ activeChat, setActiveChat, currentUser }) {
             orderBy("updatedAt", "desc")
         );
         const unsubscribe = onSnapshot(q, (snapshot) => {
+            const newUnreadState = { ...unreadChats };
             const convos = snapshot.docs.map(doc => {
                 const data = doc.data();
+                const lastMessage = data.messages?.[data.messages.length - 1];
+                const isUnread = lastMessage && lastMessage.sender !== currentUser.uid && (!data.lastRead || !data.lastRead[currentUser.uid] || data.lastRead[currentUser.uid] < lastMessage.createdAt.toMillis());
+                newUnreadState[doc.id] = isUnread;
                 const recipientId = data.participants.find(p => p !== currentUser.uid);
                 const recipientInfo = data.participantInfo[recipientId] || { displayName: 'Usuario Desconocido' };
-                return { id: doc.id, ...data, recipientInfo };
+                return { id: doc.id, ...data, recipientInfo, isUnread };
             });
             setConversations(convos);
+            setUnreadChats(newUnreadState);
         }, (error) => {
             console.error("Error al obtener conversaciones: ", error);
         });
         return () => unsubscribe();
     }, [currentUser]);
+
+    const handleOpenChat = (convo) => {
+        setActiveChat(convo);
+        if (convo.isUnread) {
+            const chatRef = doc(db, "chats", convo.id);
+            updateDoc(chatRef, {
+                [`lastRead.${currentUser.uid}`]: Date.now()
+            });
+        }
+    }
 
     useEffect(() => {
         if (activeChat?.id) {
@@ -334,7 +352,8 @@ function ChatPage({ activeChat, setActiveChat, currentUser }) {
         const messageData = { text: newMessage, sender: currentUser.uid, createdAt: new Date() };
         await updateDoc(chatRef, {
             messages: [...currentMessages, messageData],
-            updatedAt: serverTimestamp()
+            updatedAt: serverTimestamp(),
+            [`lastRead.${currentUser.uid}`]: Date.now()
         });
         setNewMessage('');
     };
@@ -347,14 +366,50 @@ function ChatPage({ activeChat, setActiveChat, currentUser }) {
                 </div>
                 <ul className="overflow-y-auto h-[calc(75vh-65px)]">
                     {conversations.map(convo => (
-                        <li key={convo.id} onClick={() => setActiveChat(convo)} className={`p-4 cursor-pointer hover:bg-gray-100 flex items-center space-x-3 ${activeChat?.id === convo.id ? 'bg-blue-100' : ''}`}>
-                            <img src={convo.recipientInfo?.photoURL || `https://i.pravatar.cc/150?u=${convo.id}`} alt={convo.recipientInfo?.displayName} className="w-10 h-10 rounded-full" />
-                            <p className="font-semibold">{convo.recipientInfo?.displayName}</p>
+                        <li key={convo.id} onClick={() => handleOpenChat(convo)} className={`p-4 cursor-pointer hover:bg-gray-100 flex items-center justify-between ${activeChat?.id === convo.id ? 'bg-blue-100' : ''}`}>
+                            <div className="flex items-center space-x-3">
+                                <img src={convo.recipientInfo?.photoURL || `https://i.pravatar.cc/150?u=${convo.id}`} alt={convo.recipientInfo?.displayName} className="w-10 h-10 rounded-full" />
+                                <p className="font-semibold">{convo.recipientInfo?.displayName}</p>
+                            </div>
+                            {convo.isUnread && <span className="h-3 w-3 bg-blue-500 rounded-full"></span>}
                         </li>
                     ))}
                 </ul>
             </div>
-            <div className={`w-full md:w-2/3 flex flex-col ${!activeChat && 'hidden md:flex'}`}>{activeChat ? ( <> <div className="p-4 border-b flex items-center"><button onClick={() => setActiveChat(null)} className="md:hidden mr-4 text-blue-600"><ArrowLeftIcon /></button><img src={activeChat.recipientInfo?.photoURL || `https://i.pravatar.cc/150?u=${activeChat.id}`} alt={activeChat.recipientInfo?.displayName} className="w-10 h-10 rounded-full mr-3" /><h2 className="text-xl font-bold">{activeChat.recipientInfo?.displayName}</h2></div><div className="flex-1 p-4 overflow-y-auto bg-gray-50">{messages.map((msg, index) => ( <div key={index} className={`flex ${msg.sender === currentUser.uid ? 'justify-end' : 'justify-start'} mb-4`}><div className={`max-w-xs md:max-w-md p-3 rounded-lg ${msg.sender === currentUser.uid ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}`}><p className="whitespace-pre-wrap break-words">{msg.text}</p><span className="text-xs opacity-75 mt-1 block text-right">{msg.createdAt?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div></div> ))}<div ref={messagesEndRef} /></div><div className="p-4 border-t bg-white"><form onSubmit={handleSendMessage} className="flex items-end gap-2"><textarea ref={textareaRef} value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Escribe un mensaje..." className="flex-1 border-gray-300 rounded-lg p-2 resize-none" rows="1" /><button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg self-end">Enviar</button></form></div> </> ) : ( <div className="flex items-center justify-center h-full text-gray-500 text-center p-4">Selecciona una conversación para empezar a chatear.</div> )}</div>
+            <div className={`w-full md:w-2/3 flex flex-col ${!activeChat && 'hidden md:flex'}`}>
+                {activeChat ? (
+                    <>
+                        <div className="p-4 border-b flex items-center">
+                            <button onClick={() => setActiveChat(null)} className="md:hidden mr-4 text-blue-600"><ArrowLeftIcon /></button>
+                            <img src={activeChat.recipientInfo?.photoURL || `https://i.pravatar.cc/150?u=${activeChat.id}`} alt={activeChat.recipientInfo?.displayName} className="w-10 h-10 rounded-full mr-3" />
+                            <h2 className="text-xl font-bold">{activeChat.recipientInfo?.displayName}</h2>
+                        </div>
+                        <div className="flex-1 p-4 overflow-y-auto bg-gray-50" style={{backgroundImage: "url('https://i.pinimg.com/originals/85/ec/df/85ecdf1c361109f7955d93b450b549d3.jpg')", backgroundSize: '30%', opacity: 0.9}}>
+                            <div className="bg-white bg-opacity-80 p-2 rounded-lg">
+                            {messages.map((msg, index) => (
+                                <div key={index} className={`flex ${msg.sender === currentUser.uid ? 'justify-end' : 'justify-start'} mb-4`}>
+                                    <div className={`max-w-xs md:max-w-md p-3 rounded-lg ${msg.sender === currentUser.uid ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}`}>
+                                        <p className="whitespace-pre-wrap break-words">{msg.text}</p>
+                                        <span className="text-xs opacity-75 mt-1 block text-right">{msg.createdAt?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    </div>
+                                </div>
+                            ))}
+                            <div ref={messagesEndRef} />
+                            </div>
+                        </div>
+                        <div className="p-4 border-t bg-white">
+                            <form onSubmit={handleSendMessage} className="flex items-end gap-2">
+                                <textarea ref={textareaRef} value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Escribe un mensaje..." className="flex-1 border-gray-300 rounded-lg p-2 resize-none" rows="1" />
+                                <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg self-end">Enviar</button>
+                            </form>
+                        </div>
+                    </>
+                ) : (
+                    <div className="flex items-center justify-center h-full text-gray-500 text-center p-4">
+                        Selecciona una conversación para empezar a chatear.
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
@@ -416,6 +471,12 @@ function AccountPage({ user, setView, handleLogout }) {
                     </div>
                 </div>
                 <div className="px-4 mt-6">
+                    <h3 className="text-gray-400 font-bold mb-2 text-sm uppercase">Notificaciones</h3>
+                    <div className="bg-gray-800 rounded-lg">
+                         <MenuItem icon={<BellIcon className="w-6 h-6 text-gray-400" />} label="Preferencias" onClick={() => setView({ page: 'notificationPreferences' })} />
+                    </div>
+                </div>
+                <div className="px-4 mt-6">
                     <h3 className="text-gray-400 font-bold mb-2 text-sm uppercase">Ayuda</h3>
                     <div className="bg-gray-800 rounded-lg">
                         <MenuItem icon={<QuestionMarkIcon />} label="Centro de ayuda" onClick={handleNotImplemented} />
@@ -439,6 +500,60 @@ function MenuItem({ icon, label, onClick }) {
                 <span className="text-white">{label}</span>
             </div>
             <ChevronRightIcon />
+        </div>
+    );
+}
+
+function NotificationPreferences({ user, setUser }) {
+    const [prefs, setPrefs] = useState(user?.notifications || { newMessages: true, newJobs: true });
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleToggle = (key) => {
+        setPrefs(prev => ({ ...prev, [key]: !prev[key] }));
+    };
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            const userDocRef = doc(db, "users", user.uid);
+            await updateDoc(userDocRef, { notifications: prefs });
+            setUser(prev => ({ ...prev, notifications: prefs }));
+            alert("Preferencias guardadas.");
+        } catch (error) {
+            console.error("Error al guardar preferencias:", error);
+            alert("No se pudieron guardar los cambios.");
+        }
+        setIsSaving(false);
+    };
+
+    return (
+        <div className="bg-white p-8 rounded-lg shadow-lg max-w-2xl mx-auto">
+            <h2 className="text-2xl font-bold mb-6">Preferencias de Notificaciones</h2>
+            <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <label htmlFor="new-messages" className="font-medium text-gray-700">Nuevos Mensajes</label>
+                    <div 
+                        onClick={() => handleToggle('newMessages')}
+                        className={`w-14 h-8 flex items-center bg-gray-300 rounded-full p-1 cursor-pointer transition-colors ${prefs.newMessages ? 'bg-blue-600' : ''}`}
+                    >
+                        <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${prefs.newMessages ? 'translate-x-6' : ''}`}></div>
+                    </div>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <label htmlFor="new-jobs" className="font-medium text-gray-700">Nuevas Ofertas de Empleo</label>
+                     <div 
+                        onClick={() => handleToggle('newJobs')}
+                        className={`w-14 h-8 flex items-center bg-gray-300 rounded-full p-1 cursor-pointer transition-colors ${prefs.newJobs ? 'bg-blue-600' : ''}`}
+                    >
+                        <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${prefs.newJobs ? 'translate-x-6' : ''}`}></div>
+                    </div>
+                </div>
+            </div>
+            <div className="flex justify-end mt-8">
+                <button onClick={handleSave} disabled={isSaving} className="bg-blue-600 text-white px-6 py-2 rounded-lg disabled:bg-blue-300 flex items-center">
+                    {isSaving ? <SpinnerIcon /> : 'Guardar'}
+                </button>
+            </div>
         </div>
     );
 }
