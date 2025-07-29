@@ -42,7 +42,6 @@ import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css";
 
 // --- ID DE ADMINISTRADOR ---
-// Reemplaza esta cadena con tu propio User ID de Firebase para ver el panel de admin
 const ADMIN_UID = "TU_USER_ID_DE_FIREBASE";
 
 // --- LISTA COMPLETA DE CIUDADES DE NICARAGUA ---
