@@ -19,7 +19,7 @@ import {
     doc,
     setDoc,
     getDoc,
-    getDocs, // <- Importado para la página de perfil
+    getDocs,
     updateDoc,
     serverTimestamp,
     enableIndexedDbPersistence,
@@ -74,7 +74,6 @@ const analytics = getAnalytics(app);
 try { enableIndexedDbPersistence(db, { cacheSizeBytes: CACHE_SIZE_UNLIMITED }); } catch (error) { console.error("Error al inicializar la persistencia de Firestore:", error); }
 
 // --- ICONOS ---
-// (Tu código de íconos SVG se queda igual, no es necesario mostrarlo aquí por brevedad)
 const BellIcon = ({ hasNotification, className }) => ( <div className="relative"><svg xmlns="http://www.w3.org/2000/svg" className={className || "h-7 w-7"} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>{hasNotification && <span className="absolute top-0 right-0 block h-3 w-3 rounded-full bg-red-500 ring-2 ring-white"></span>}</div>);
 const BriefcaseIcon = ({className}) => (<svg xmlns="http://www.w3.org/2000/svg" className={className || "h-12 w-12 text-blue-500"} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>);
 const ArrowLeftIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" /></svg>;
@@ -158,7 +157,6 @@ export default function App() {
 
                     if (currentToken) {
                         console.log("FCM Token:", currentToken);
-                        // Guarda el token en el perfil del usuario en Firestore
                         const userDocRef = doc(db, "users", currentUser.uid);
                         await updateDoc(userDocRef, { fcmToken: currentToken });
                     } else {
@@ -718,11 +716,85 @@ function NotificationPreferences({ user, setUser }) {
     );
 }
 
-// --- NUEVO COMPONENTE DE PÁGINA DE PERFIL PÚBLICO ---
+// --- COMPONENTE PARA EL INPUT DE ESTRELLAS ---
+function StarRatingInput({ rating, setRating }) {
+    const [hover, setHover] = useState(0);
+    return (
+        <div className="flex space-x-1 justify-center">
+            {[...Array(5)].map((star, index) => {
+                const ratingValue = index + 1;
+                return (
+                    <label key={index}>
+                        <input type="radio" name="rating" value={ratingValue} onClick={() => setRating(ratingValue)} className="hidden" />
+                        <svg
+                            className={`w-8 h-8 cursor-pointer ${ratingValue <= (hover || rating) ? 'text-yellow-400' : 'text-gray-300'}`}
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                            onMouseEnter={() => setHover(ratingValue)}
+                            onMouseLeave={() => setHover(0)}
+                        >
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                    </label>
+                );
+            })}
+        </div>
+    );
+}
+
+// --- COMPONENTE MODAL PARA ESCRIBIR UNA RESEÑA ---
+function ReviewModal({ show, onClose, onSubmit, targetUserName }) {
+    const [rating, setRating] = useState(0);
+    const [comment, setComment] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    if (!show) return null;
+
+    const handleSubmit = async () => {
+        if (rating === 0 || comment.trim() === "") {
+            alert("Por favor, selecciona una calificación y escribe un comentario.");
+            return;
+        }
+        setIsSubmitting(true);
+        await onSubmit(rating, comment);
+        setIsSubmitting(false);
+        setRating(0);
+        setComment("");
+        onClose();
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+                <h2 className="text-xl font-bold mb-4">Dejar una reseña para {targetUserName}</h2>
+                <div className="space-y-4">
+                    <StarRatingInput rating={rating} setRating={setRating} />
+                    <textarea
+                        value={comment}
+                        onChange={(e) => setComment(e.target.value)}
+                        placeholder="Escribe tu comentario aquí..."
+                        className="w-full border-gray-300 rounded-md p-2"
+                        rows="4"
+                    />
+                    <div className="flex justify-end gap-4">
+                        <button onClick={onClose} className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300">Cancelar</button>
+                        <button onClick={handleSubmit} disabled={isSubmitting} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300">
+                            {isSubmitting ? 'Enviando...' : 'Enviar Reseña'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// --- COMPONENTE PARA LA PÁGINA DE PERFIL PÚBLICO ---
 function PublicProfilePage({ userId, setView, user }) {
     const [profile, setProfile] = useState(null);
     const [userListings, setUserListings] = useState([]);
+    const [reviews, setReviews] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [showReviewModal, setShowReviewModal] = useState(false);
 
     useEffect(() => {
         const fetchProfileData = async () => {
@@ -747,6 +819,16 @@ function PublicProfilePage({ userId, setView, user }) {
                 const listingsData = listingsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 setUserListings(listingsData);
 
+                // 3. Obtener las reseñas del usuario
+                const reviewsQuery = query(
+                    collection(db, 'users', userId, 'reviews'),
+                    orderBy('createdAt', 'desc'),
+                    limit(10) // Muestra las 10 más recientes
+                );
+                const reviewsSnapshot = await getDocs(reviewsQuery);
+                const reviewsData = reviewsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setReviews(reviewsData);
+
             } catch (error) {
                 console.error("Error al cargar el perfil público:", error);
             }
@@ -758,6 +840,39 @@ function PublicProfilePage({ userId, setView, user }) {
         }
     }, [userId]);
 
+    const handleReviewSubmit = async (rating, comment) => {
+        if (!user) {
+            alert("Debes iniciar sesión para dejar una reseña.");
+            return;
+        }
+        
+        const reviewData = {
+            rating: rating,
+            comment: comment,
+            createdAt: serverTimestamp(),
+            reviewerId: user.uid,
+            reviewerName: user.displayName,
+            reviewerPhotoURL: user.photoURL
+        };
+
+        try {
+            const reviewsCollectionRef = collection(db, 'users', userId, 'reviews');
+            await addDoc(reviewsCollectionRef, reviewData);
+            alert("¡Gracias por tu reseña!");
+        } catch (error) {
+            console.error("Error al enviar la reseña:", error);
+            alert("Hubo un problema al enviar tu reseña.");
+        }
+    };
+
+    const renderStars = (rating) => {
+        const stars = [];
+        for (let i = 1; i <= 5; i++) {
+            stars.push(<StarIcon key={i} filled={i <= rating} />);
+        }
+        return stars;
+    };
+
     if (loading) {
         return <div className="text-center p-10">Cargando perfil del vendedor...</div>;
     }
@@ -767,30 +882,69 @@ function PublicProfilePage({ userId, setView, user }) {
     }
 
     return (
-        <div className="container mx-auto">
-            {/* Sección de Información del Perfil */}
-            <div className="bg-white p-6 rounded-lg shadow-md mb-8 flex items-center space-x-6">
-                <img src={profile.photoURL || `https://i.pravatar.cc/150?u=${userId}`} alt={profile.displayName} className="w-24 h-24 rounded-full border-4 border-gray-200" />
+        <>
+            <ReviewModal 
+                show={showReviewModal}
+                onClose={() => setShowReviewModal(false)}
+                onSubmit={handleReviewSubmit}
+                targetUserName={profile?.displayName}
+            />
+            <div className="container mx-auto">
+                {/* Sección de Información del Perfil */}
+                <div className="bg-white p-6 rounded-lg shadow-md mb-8 flex items-center justify-between">
+                    <div className="flex items-center space-x-6">
+                        <img src={profile.photoURL || `https://i.pravatar.cc/150?u=${userId}`} alt={profile.displayName} className="w-24 h-24 rounded-full border-4 border-gray-200" />
+                        <div>
+                            <h1 className="text-3xl font-bold">{profile.displayName}</h1>
+                            <p className="text-gray-600">{profile.location || 'Ubicación no especificada'}</p>
+                            <div className="flex items-center mt-1">
+                                <div className="flex">{renderStars(profile.rating || 0)}</div>
+                                <span className="text-xs text-gray-400 ml-2">({profile.ratingCount || 0} calificaciones)</span>
+                            </div>
+                        </div>
+                    </div>
+                    {user && user.uid !== userId && (
+                        <button onClick={() => setShowReviewModal(true)} className="bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-600">
+                            Dejar Reseña
+                        </button>
+                    )}
+                </div>
+
+                {/* Sección de Anuncios del Vendedor */}
                 <div>
-                    <h1 className="text-3xl font-bold">{profile.displayName}</h1>
-                    <p className="text-gray-600">{profile.location || 'Ubicación no especificada'}</p>
-                    {/* Aquí podrías agregar el sistema de estrellas/calificación en el futuro */}
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6">Anuncios de {profile.displayName}</h2>
+                    {userListings.length > 0 ? (
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                            {userListings.map(listing => (
+                                <ListingCard key={listing.id} listing={listing} setView={setView} user={user} />
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-gray-500">Este vendedor no tiene anuncios activos en este momento.</p>
+                    )}
+                </div>
+
+                {/* Sección de Reseñas Recibidas */}
+                <div className="mt-12">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6">Reseñas Recibidas</h2>
+                    {reviews.length > 0 ? (
+                        <div className="space-y-4">
+                            {reviews.map(review => (
+                                <div key={review.id} className="bg-gray-50 p-4 rounded-lg border">
+                                    <div className="flex items-center mb-2">
+                                        <img src={review.reviewerPhotoURL} alt={review.reviewerName} className="w-8 h-8 rounded-full mr-3" />
+                                        <span className="font-semibold">{review.reviewerName}</span>
+                                    </div>
+                                    <div className="flex mb-2">{renderStars(review.rating)}</div>
+                                    <p className="text-gray-700">{review.comment}</p>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-gray-500">Este usuario aún no ha recibido reseñas.</p>
+                    )}
                 </div>
             </div>
-
-            {/* Sección de Anuncios del Vendedor */}
-            <div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">Anuncios de {profile.displayName}</h2>
-                {userListings.length > 0 ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                        {userListings.map(listing => (
-                            <ListingCard key={listing.id} listing={listing} setView={setView} user={user} />
-                        ))}
-                    </div>
-                ) : (
-                    <p className="text-gray-500">Este vendedor no tiene anuncios activos en este momento.</p>
-                )}
-            </div>
-        </div>
+        </>
     );
 }
