@@ -1,25 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAnalytics, logEvent } from "firebase/analytics";
-import { 
-    getAuth, 
+import {
+    getAuth,
     onAuthStateChanged,
     signInWithPopup,
     GoogleAuthProvider,
     updateProfile
 } from 'firebase/auth';
-import { 
-    getFirestore, 
-    collection, 
-    addDoc, 
-    onSnapshot, 
-    query, 
+import {
+    getFirestore,
+    collection,
+    addDoc,
+    onSnapshot,
+    query,
     orderBy,
     where,
     doc,
     setDoc,
     getDoc,
-    getDocs, // <- Importado para la página de perfil
+    getDocs,
     updateDoc,
     serverTimestamp,
     enableIndexedDbPersistence,
@@ -102,8 +102,8 @@ function PleaseLogIn({ onLogin }) {
         <div className="text-center p-8 max-w-md mx-auto bg-white rounded-lg shadow-md">
             <h2 className="text-2xl font-bold mb-4">Inicia Sesión para Continuar</h2>
             <p className="text-gray-600 mb-6">Necesitas una cuenta para poder acceder a esta página.</p>
-            <button 
-                onClick={onLogin} 
+            <button
+                onClick={onLogin}
                 className="bg-green-500 text-white font-semibold px-6 py-3 rounded-lg hover:bg-green-600 transition-colors"
             >
                 Iniciar Sesión con Google
@@ -126,14 +126,14 @@ export default function App() {
             if (currentUser) {
                 const userDocRef = doc(db, "users", currentUser.uid);
                 const userDocSnap = await getDoc(userDocRef);
-                
+
                 if (userDocSnap.exists()) {
                     setUser({ uid: currentUser.uid, ...userDocSnap.data() });
                 } else {
-                    const newUserProfile = { 
-                        displayName: currentUser.displayName || "Usuario Anónimo", 
-                        email: currentUser.email, 
-                        photoURL: currentUser.photoURL, 
+                    const newUserProfile = {
+                        displayName: currentUser.displayName || "Usuario Anónimo",
+                        email: currentUser.email,
+                        photoURL: currentUser.photoURL,
                         createdAt: serverTimestamp(),
                         location: "Managua, NI",
                         followers: 0,
@@ -182,14 +182,14 @@ export default function App() {
     const goHome = () => setHistory([{ page: 'home' }]);
     const handleLogin = async () => { try { await signInWithPopup(auth, googleProvider); } catch (error) { console.error("Error al iniciar sesión con Google:", error); } };
     const handleLogout = () => { auth.signOut(); goHome(); };
-    
+
     const navigateToMessages = async (chatInfo) => {
         const currentUserAuth = auth.currentUser;
         if (!currentUserAuth) {
             alert("Debes iniciar sesión para enviar mensajes.");
             return;
         }
-        
+
         if (currentUserAuth.uid === chatInfo.recipientId) {
             alert("No puedes enviarte mensajes a ti mismo.");
             return;
@@ -197,7 +197,7 @@ export default function App() {
 
         const chatId = [currentUserAuth.uid, chatInfo.recipientId].sort().join('_');
         const chatRef = doc(db, "chats", chatId);
-        
+
         try {
             let chatDoc = await getDoc(chatRef);
 
@@ -217,14 +217,14 @@ export default function App() {
                         [currentUserAuth.uid]: currentUserData,
                         [chatInfo.recipientId]: recipientData
                     },
-                    messages: [], 
-                    createdAt: serverTimestamp(), 
+                    messages: [],
+                    createdAt: serverTimestamp(),
                     updatedAt: serverTimestamp(),
                     lastRead: {}
                 });
                 chatDoc = await getDoc(chatRef);
             }
-            
+
             const recipientId = chatDoc.data().participants.find(p => p !== currentUserAuth.uid);
             const recipientInfo = chatDoc.data().participantInfo[recipientId];
 
@@ -236,7 +236,7 @@ export default function App() {
             alert("Hubo un problema al iniciar la conversación. Inténtalo de nuevo.");
         }
     };
-    
+
     const renderContent = () => {
         const { page } = currentView;
         const protectedPages = ['account', 'accountSettings', 'myListings', 'favorites', 'messages', 'publish', 'adminDashboard', 'notificationPreferences'];
@@ -257,6 +257,7 @@ export default function App() {
             case 'adminDashboard': return <AdminDashboard />;
             case 'notificationPreferences': return <NotificationPreferences user={user} setUser={setUser} />;
             case 'publicProfile': return <PublicProfilePage userId={currentView.userId} setView={setView} user={user} />;
+            case 'companyProfile': return <CompanyProfilePage userId={currentView.userId} setView={setView} user={user} />;
             default: return <HomePage setView={setView} />;
         }
     };
@@ -273,7 +274,7 @@ export default function App() {
         <div className="min-h-screen font-sans bg-gray-100">
             <Header user={user} onLogin={handleLogin} onLogout={handleLogout} setView={setView} goHome={goHome} notificationCount={Object.values(unreadChats).filter(Boolean).length} />
             <main className="container mx-auto pb-24 md:pb-8">
-                {history.length > 1 && currentView.page !== 'account' && 
+                {history.length > 1 && currentView.page !== 'account' &&
                     <div className="px-4 md:px-0">
                         <BackButton onClick={goBack} />
                     </div>
@@ -301,93 +302,102 @@ function SkeletonCard() { return ( <div className="bg-white rounded-lg shadow-md
 function ListingCard({ listing, setView, user }) { const placeholderUrl = `https://placehold.co/400x400/e2e8f0/64748b?text=${listing.type === 'producto' ? 'Producto' : 'Empleo'}`; const [isFavorite, setIsFavorite] = useState(false); useEffect(() => { if (!user) return; const favRef = doc(db, "users", user.uid, "favorites", listing.id); const unsubscribe = onSnapshot(favRef, (doc) => { setIsFavorite(doc.exists()); }); return () => unsubscribe(); }, [user, listing.id]); const toggleFavorite = async (e) => { e.stopPropagation(); if (!user) { alert("Debes iniciar sesión para guardar favoritos."); return; } const favRef = doc(db, "users", user.uid, "favorites", listing.id); if (isFavorite) { await deleteDoc(favRef); } else { await setDoc(favRef, { ...listing, addedAt: serverTimestamp() }); } }; const isJob = listing.type === 'trabajo'; const imageUrl = listing.photos?.[0]?.thumb || placeholderUrl; return ( <div onClick={() => setView({ page: 'listingDetail', listingId: listing.id })} className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col group transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer"><div className="relative"><img src={imageUrl} alt={listing.title} className="w-full aspect-square object-cover" />{user && ( <button onClick={toggleFavorite} className="absolute top-2 right-2 bg-white p-2 rounded-full shadow-md transition-opacity opacity-0 group-hover:opacity-100"><HeartIcon isFavorite={isFavorite} className={`w-6 h-6 ${isFavorite ? 'text-red-500' : 'text-gray-400'}`} /></button> )}{listing.photos && listing.photos.length > 1 && ( <div className="absolute top-2 left-2 bg-black bg-opacity-60 text-white text-xs font-bold px-2 py-1 rounded-md flex items-center"><CameraIcon /><span className="ml-1">{listing.photos.length}</span></div> )}</div><div className="p-4 flex-grow flex flex-col space-y-1"><span className="text-xs font-semibold text-gray-500 uppercase">{listing.category}</span><h3 className="font-semibold text-gray-800 h-12 line-clamp-2">{listing.title}</h3><p className="text-gray-600 text-sm flex-grow">{listing.location}</p><div className="pt-2">{isJob ? ( <p className="text-md font-bold text-blue-600">{listing.salary || 'Salario a convenir'}</p> ) : ( <p className="text-lg font-extrabold text-blue-700">{listing.price ? `C$ ${new Intl.NumberFormat('es-NI').format(listing.price)}` : 'Consultar'}</p> )}</div></div></div> ); }
 function PublishPage({ type, setView, user, listingId }) { const isJob = type === 'trabajo'; const [formData, setFormData] = useState({ title: '', description: '', category: '', price: '', companyName: '', salary: '', make: '', model: '', year: '', mileage: '', applicationContact: '' }); const [location, setLocation] = useState(''); const [newImageFiles, setNewImageFiles] = useState([]); const [existingPhotos, setExistingPhotos] = useState([]); const [isSubmitting, setIsSubmitting] = useState(false); const [errors, setErrors] = useState({}); const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 }); const categories = isJob ? jobCategories : productCategories; const isEditing = !!listingId; useEffect(() => { if (isEditing) { const fetchListing = async () => { const docRef = doc(db, "listings", listingId); const docSnap = await getDoc(docRef); if (docSnap.exists()) { const data = docSnap.data(); setFormData({ title: data.title, description: data.description, category: data.category || '', price: data.price || '', companyName: data.companyName || '', salary: data.salary || '', make: data.make || '', model: data.model || '', year: data.year || '', mileage: data.mileage || '', applicationContact: data.applicationContact || '' }); setLocation(data.location); setExistingPhotos(data.photos || []); } }; fetchListing(); } }, [listingId, isEditing]); const validateForm = () => { const newErrors = {}; if (!formData.title.trim()) newErrors.title = "El título es obligatorio."; else if (formData.title.trim().length < 5) newErrors.title = "El título debe tener al menos 5 caracteres."; if (!isJob && !formData.category) newErrors.category = "Debes seleccionar una categoría."; if (!location) newErrors.location = "Debes seleccionar una ubicación."; if (!formData.description.trim()) newErrors.description = "La descripción es obligatoria."; else if (formData.description.trim().length < 15) newErrors.description = "La descripción debe ser más detallada (mínimo 15 caracteres)."; if (!isJob && existingPhotos.length === 0 && newImageFiles.length === 0) newErrors.images = "Debes subir al menos una foto para el artículo."; setErrors(newErrors); return Object.keys(newErrors).length === 0; }; const handleImageChange = (e) => { if (e.target.files) { const filesArray = Array.from(e.target.files); const currentImagesCount = existingPhotos.length + newImageFiles.length; const maxImages = isJob ? 1 : 12; if (currentImagesCount + filesArray.length > maxImages) { setErrors(prev => ({ ...prev, images: `No puedes subir más de ${maxImages} ${isJob ? 'logo/foto' : 'fotos'}.` })); return; } const validFiles = []; for (const file of filesArray) { if (file.size > 5 * 1024 * 1024) { setErrors(prev => ({ ...prev, images: `La imagen "${file.name}" es muy grande (máx 5MB).` })); continue; } if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) { setErrors(prev => ({ ...prev, images: `El archivo "${file.name}" no es una imagen válida.` })); continue; } validFiles.push(file); } if (isJob) { setNewImageFiles(validFiles); } else { setNewImageFiles(prev => [...prev, ...validFiles]); } if (errors.images) setErrors(prev => ({ ...prev, images: null })); } }; const removeNewImage = (index) => { setNewImageFiles(prev => prev.filter((_, i) => i !== index)); }; const removeExistingImage = (index) => { setExistingPhotos(prev => prev.filter((_, i) => i !== index)); }; const handleSubmit = async (e) => { e.preventDefault(); if (!user) { setErrors({ form: "Debes iniciar sesión para publicar." }); return; } if (!validateForm()) return; setIsSubmitting(true); setErrors({}); try { const uploadAndGetURLs = async (file) => { const timestamp = Date.now(); const randomId = Math.random().toString(36).substring(2, 8); const baseName = `${user.uid}/${timestamp}_${randomId}_${file.name}`; const fullImg = await imageCompression(file, { maxSizeMB: 1.5, maxWidthOrHeight: 1920 }); const fullImgRef = ref(storage, `listings/${baseName}_full.jpg`); await uploadBytes(fullImgRef, fullImg); const fullUrl = await getDownloadURL(fullImgRef); const thumbImg = await imageCompression(file, { maxSizeMB: 0.1, maxWidthOrHeight: 400 }); const thumbImgRef = ref(storage, `listings/${baseName}_thumb.jpg`); await uploadBytes(thumbImgRef, thumbImg); const thumbUrl = await getDownloadURL(thumbImgRef); return { full: fullUrl, thumb: thumbUrl }; }; setUploadProgress({ current: 0, total: newImageFiles.length }); const newPhotoObjects = []; for (let i = 0; i < newImageFiles.length; i++) { const file = newImageFiles[i]; const urls = await uploadAndGetURLs(file); newPhotoObjects.push(urls); setUploadProgress({ current: i + 1, total: newImageFiles.length }); } const allPhotos = [...existingPhotos, ...newPhotoObjects]; const listingData = { title: formData.title, description: formData.description, category: formData.category, location, type, photos: allPhotos, userId: user.uid, userName: user.displayName, userPhotoURL: user.photoURL, status: 'active', updatedAt: serverTimestamp(), }; if (isJob) { listingData.companyName = formData.companyName; listingData.salary = formData.salary; listingData.applicationContact = formData.applicationContact; } else { listingData.price = Number(formData.price) || 0; listingData.make = formData.make; listingData.model = formData.model; listingData.year = formData.year; listingData.mileage = formData.mileage; } if (isEditing) { const docRef = doc(db, "listings", listingId); await updateDoc(docRef, listingData); } else { const newDocRef = await addDoc(collection(db, "listings"), { ...listingData, createdAt: serverTimestamp() }); logEvent(analytics, 'publish_listing', { user_id: user.uid, listing_id: newDocRef.id, listing_type: type, category: listingData.category, location: listingData.location, }); } setView({ page: 'listings', type: type }); } catch (error) { console.error("Error al publicar:", error); setErrors({ form: "Hubo un error al publicar. Revisa tu conexión o inténtalo más tarde." }); } finally { setIsSubmitting(false); setUploadProgress({ current: 0, total: 0 }); } }; const showVehicleFields = formData.category === 'Autos y Vehículos' || formData.category === 'Motos'; const allPreviews = [ ...existingPhotos.map((photo, index) => ({ type: 'existing', url: photo.thumb, index })), ...newImageFiles.map((file, index) => ({ type: 'new', url: URL.createObjectURL(file), index })) ]; return ( <div className="container mx-auto max-w-2xl"><div className="bg-white p-8 rounded-lg shadow-lg"><h2 className="text-2xl font-bold mb-6 text-center">{isEditing ? 'Editar' : 'Publicar'} {isJob ? 'Empleo' : 'Artículo'}</h2><form onSubmit={handleSubmit} className="space-y-4">{errors.form && <p className="text-red-500 text-sm bg-red-100 p-2 rounded-md">{errors.form}</p>}<div><input type="text" placeholder={isJob ? "Título del Puesto" : "Título del anuncio"} value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.title ? 'border-red-500' : ''}`} />{errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}</div><div><select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.category && !isJob ? 'border-red-500' : ''}`}><option value="">{isJob ? "Selecciona una Categoría (Opcional)" : "Selecciona una Categoría"}</option>{categories.map(c => <option key={c} value={c}>{c}</option>)}</select>{errors.category && !isJob && <p className="text-red-500 text-xs mt-1">{errors.category}</p>}</div>{showVehicleFields && ( <div className="p-4 border rounded-md bg-gray-50 space-y-4"><h3 className="font-semibold text-gray-700">Detalles del Vehículo</h3><div><input type="text" placeholder="Marca (Ej: Toyota)" value={formData.make} onChange={e => setFormData({ ...formData, make: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" /></div><div><input type="text" placeholder="Modelo (Ej: Hilux)" value={formData.model} onChange={e => setFormData({ ...formData, model: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" /></div><div><input type="number" placeholder="Año (Ej: 2022)" value={formData.year} onChange={e => setFormData({ ...formData, year: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" /></div><div><input type="number" placeholder="Kilometraje (Opcional)" value={formData.mileage} onChange={e => setFormData({ ...formData, mileage: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" /></div></div> )}{isJob && (<> <input type="text" placeholder="Nombre de la Empresa (Opcional)" value={formData.companyName} onChange={e => setFormData({ ...formData, companyName: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" /> <input type="text" placeholder="Email o Link para Aplicar (Opcional)" value={formData.applicationContact} onChange={e => setFormData({ ...formData, applicationContact: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" /> </>)}<div><textarea placeholder={isJob ? "Descripción del puesto, requisitos..." : "Descripción detallada..."} value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.description ? 'border-red-500' : ''}`} rows="4" />{errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}</div>{isJob ? <input type="text" placeholder="Salario (Ej: C$15,000 o A convenir)" value={formData.salary} onChange={e => setFormData({ ...formData, salary: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" /> : <input type="number" placeholder="Precio (C$) (Opcional)" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />}<div><select value={location} onChange={e => setLocation(e.target.value)} className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.location ? 'border-red-500' : ''}`}><option value="">Selecciona una Ciudad</option>{nicaraguaCities.map(c => <option key={c} value={c}>{c}</option>)}</select>{errors.location && <p className="text-red-500 text-xs mt-1">{errors.location}</p>}</div><div><label className="block text-sm font-medium text-gray-700">{isJob ? 'Logo (1 max)' : 'Fotos (12 max)'}</label><div className="mt-2 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">{allPreviews.map((p) => ( <div key={`${p.type}-${p.index}`} className="relative"><img src={p.url} alt={`Preview ${p.index}`} className="h-24 w-24 object-cover rounded-md" /><button type="button" onClick={() => p.type === 'existing' ? removeExistingImage(p.index) : removeNewImage(p.index)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold">&times;</button></div> ))}{allPreviews.length < (isJob ? 1 : 12) && ( <label htmlFor="file-upload" className="flex items-center justify-center w-24 h-24 border-2 border-gray-300 border-dashed rounded-md cursor-pointer hover:border-blue-500"><div className="text-center text-gray-500">+<br />Añadir</div><input id="file-upload" type="file" className="sr-only" onChange={handleImageChange} accept="image/*" multiple={!isJob} /></label> )}{errors.images && <p className="text-red-500 text-xs mt-1">{errors.images}</p>}</div></div><div className="flex justify-end space-x-4 items-center">{isSubmitting && uploadProgress.total > 0 && <span className="text-sm text-gray-500">{`Subiendo ${uploadProgress.current} de ${uploadProgress.total}...`}</span>}<button type="button" onClick={() => setView({ page: 'listings', type: type })} className="bg-gray-200 px-4 py-2 rounded-lg">Cancelar</button><button type="submit" disabled={isSubmitting} className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center disabled:bg-blue-300 min-w-[100px]">{isSubmitting ? <SpinnerIcon /> : (isEditing ? 'Actualizar' : 'Publicar')}</button></div></form></div></div> ); }
 
-function ListingDetailPage({ listingId, currentUser, navigateToMessages, setView }) { 
-    const [listing, setListing] = useState(null); 
-    const [loading, setLoading] = useState(true); 
-    const [mainImage, setMainImage] = useState(''); 
-    const [lightboxOpen, setLightboxOpen] = useState(false); 
-    const [lightboxIndex, setLightboxIndex] = useState(0); 
-    const [isFavorite, setIsFavorite] = useState(false); 
-    const [seller, setSeller] = useState(null); 
+function ListingDetailPage({ listingId, currentUser, navigateToMessages, setView }) {
+    const [listing, setListing] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [mainImage, setMainImage] = useState('');
+    const [lightboxOpen, setLightboxOpen] = useState(false);
+    const [lightboxIndex, setLightboxIndex] = useState(0);
+    const [isFavorite, setIsFavorite] = useState(false);
+    const [seller, setSeller] = useState(null);
 
-    useEffect(() => { 
-        const docRef = doc(db, "listings", listingId); 
-        const unsubscribe = onSnapshot(docRef, (doc) => { 
-            if (doc.exists()) { 
-                const data = { id: doc.id, ...doc.data() }; 
-                setListing(data); 
-                if (data.photos && data.photos.length > 0) { 
-                    setMainImage(data.photos[0].full); 
-                } 
-            } 
-            setLoading(false); 
-        }); 
-        return () => unsubscribe(); 
-    }, [listingId]); 
+    useEffect(() => {
+        const docRef = doc(db, "listings", listingId);
+        const unsubscribe = onSnapshot(docRef, (doc) => {
+            if (doc.exists()) {
+                const data = { id: doc.id, ...doc.data() };
+                setListing(data);
+                if (data.photos && data.photos.length > 0) {
+                    setMainImage(data.photos[0].full);
+                }
+            }
+            setLoading(false);
+        });
+        return () => unsubscribe();
+    }, [listingId]);
 
-    useEffect(() => { 
-        if (!listing) return; 
-        const fetchSeller = async () => { 
-            const userRef = doc(db, "users", listing.userId); 
-            const userSnap = await getDoc(userRef); 
-            if (userSnap.exists()) { 
-                setSeller(userSnap.data()); 
-            } 
-        }; 
-        fetchSeller(); 
-        if (currentUser) { 
-            const favRef = doc(db, "users", currentUser.uid, "favorites", listing.id); 
-            const unsub = onSnapshot(favRef, (doc) => { 
-                setIsFavorite(doc.exists()); 
-            }); 
-            return () => unsub(); 
-        } 
-    }, [currentUser, listing]); 
+    useEffect(() => {
+        if (!listing) return;
+        const fetchSeller = async () => {
+            const userRef = doc(db, "users", listing.userId);
+            const userSnap = await getDoc(userRef);
+            if (userSnap.exists()) {
+                setSeller(userSnap.data());
+            }
+        };
+        fetchSeller();
+        if (currentUser) {
+            const favRef = doc(db, "users", currentUser.uid, "favorites", listing.id);
+            const unsub = onSnapshot(favRef, (doc) => {
+                setIsFavorite(doc.exists());
+            });
+            return () => unsub();
+        }
+    }, [currentUser, listing]);
 
-    const toggleFavorite = async (e) => { 
-        e.stopPropagation(); 
-        if (!currentUser) return; 
-        const favRef = doc(db, "users", currentUser.uid, "favorites", listing.id); 
-        if (isFavorite) { 
-            await deleteDoc(favRef); 
-        } else { 
-            await setDoc(favRef, { ...listing, addedAt: serverTimestamp() }); 
-        } 
-    }; 
+    const toggleFavorite = async (e) => {
+        e.stopPropagation();
+        if (!currentUser) return;
+        const favRef = doc(db, "users", currentUser.uid, "favorites", listing.id);
+        if (isFavorite) {
+            await deleteDoc(favRef);
+        } else {
+            await setDoc(favRef, { ...listing, addedAt: serverTimestamp() });
+        }
+    };
 
-    const openLightboxOn = (index) => { 
-        setLightboxIndex(index); 
-        setLightboxOpen(true); 
-    }; 
+    const openLightboxOn = (index) => {
+        setLightboxIndex(index);
+        setLightboxOpen(true);
+    };
 
-    if (loading) return <p className="text-center">Cargando anuncio...</p>; 
-    if (!listing) return <p className="text-center">Anuncio no encontrado.</p>; 
-    
-    const isJob = listing.type === 'trabajo'; 
-    const publisherLabel = isJob ? 'Reclutador' : 'Vendedor'; 
-    const slides = listing.photos?.map(photo => ({ src: photo.full })) || []; 
+    if (loading) return <p className="text-center">Cargando anuncio...</p>;
+    if (!listing) return <p className="text-center">Anuncio no encontrado.</p>;
 
-    return ( 
-        <> 
+    const isJob = listing.type === 'trabajo';
+    const publisherLabel = isJob ? 'Reclutador' : 'Vendedor';
+    const slides = listing.photos?.map(photo => ({ src: photo.full })) || [];
+
+    return (
+        <>
             <div className="bg-white p-4 sm:p-8 rounded-lg shadow-lg max-w-4xl mx-auto">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="relative">
                         <img src={mainImage || 'https://placehold.co/600x400'} alt={listing.title} className="w-full h-80 object-cover rounded-lg mb-4 cursor-pointer" onClick={() => openLightboxOn(listing.photos.findIndex(p => p.full === mainImage))} />
                         {currentUser && ( <button onClick={toggleFavorite} className="absolute top-4 right-4 bg-white p-2 rounded-full shadow-md"><HeartIcon isFavorite={isFavorite} className={`w-6 h-6 ${isFavorite ? 'text-red-500' : 'text-gray-400'}`} /></button> )}
-                        {listing.photos && listing.photos.length > 1 && ( 
+                        {listing.photos && listing.photos.length > 1 && (
                             <div className="flex space-x-2 overflow-x-auto">
-                                {listing.photos.map((photo, index) => ( 
-                                    <img key={index} src={photo.thumb} onClick={() => setMainImage(photo.full)} className={`h-20 w-20 object-cover rounded-md cursor-pointer ${mainImage === photo.full ? 'border-2 border-blue-500' : ''}`} /> 
+                                {listing.photos.map((photo, index) => (
+                                    <img key={index} src={photo.thumb} onClick={() => setMainImage(photo.full)} className={`h-20 w-20 object-cover rounded-md cursor-pointer ${mainImage === photo.full ? 'border-2 border-blue-500' : ''}`} />
                                 ))}
-                            </div> 
+                            </div>
                         )}
                     </div>
                     <div>
                         <span className="text-sm font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{listing.category}</span>
                         <h1 className="text-3xl font-bold my-2">{listing.title}</h1>
-                        {isJob ? ( <p className="text-2xl font-semibold text-gray-800 mb-1">Empresa: {listing.companyName || 'No especificada'}</p> ) : null}
+
+                        {isJob ? (
+                            <div
+                                className="text-xl font-semibold text-gray-700 mb-1 cursor-pointer hover:text-blue-600 hover:underline"
+                                onClick={() => setView({ page: 'companyProfile', userId: listing.userId })}
+                            >
+                                {listing.companyName || listing.userName}
+                            </div>
+                        ) : null}
+
                         <p className="text-3xl font-bold text-blue-600 mb-4">{isJob ? (listing.salary || 'Salario a convenir') : (listing.price ? `C$ ${new Intl.NumberFormat('es-NI').format(listing.price)}` : 'Precio a Consultar')}</p>
-                        {(listing.make || listing.model || listing.year) && ( 
+                        {(listing.make || listing.model || listing.year) && (
                             <div className="mb-4 p-4 border rounded-md bg-gray-50">
                                 <h3 className="font-semibold text-lg mb-2">Detalles del Vehículo</h3>
                                 <div className="grid grid-cols-2 gap-2 text-sm">
@@ -396,7 +406,7 @@ function ListingDetailPage({ listingId, currentUser, navigateToMessages, setView
                                     {listing.year && <p><strong>Año:</strong> {listing.year}</p>}
                                     {listing.mileage && <p><strong>Kilometraje:</strong> {listing.mileage} km</p>}
                                 </div>
-                            </div> 
+                            </div>
                         )}
                         <p className="text-gray-600 mb-4 whitespace-pre-wrap">{listing.description || "No se agregó una descripción."}</p>
                         <div className="border-t pt-4 space-y-4">
@@ -410,35 +420,165 @@ function ListingDetailPage({ listingId, currentUser, navigateToMessages, setView
                                     <p className="text-sm text-gray-500">{listing.location}</p>
                                 </div>
                             </div>
-                            {seller && seller.businessName && ( 
+                            {seller && seller.businessName && (
                                 <div className="border-t pt-4">
                                     <h3 className="font-semibold text-lg mb-2">Información del Negocio</h3>
                                     <p className="font-semibold text-gray-800">{seller.businessName}</p>
                                     {seller.website && <a href={seller.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Visitar Sitio Web</a>}
-                                </div> 
+                                </div>
                             )}
                         </div>
-                        {currentUser && currentUser.uid !== listing.userId && ( 
+                        {currentUser && currentUser.uid !== listing.userId && (
                             <div className="mt-6 space-y-4">
                                 <button onClick={() => navigateToMessages({recipientId: listing.userId, recipientName: listing.userName, recipientPhotoURL: listing.userPhotoURL})} className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-bold transition">Enviar Mensaje</button>
-                                {isJob && listing.applicationContact && ( 
-                                    <a href={listing.applicationContact.startsWith('http') ? listing.applicationContact : `mailto:${listing.applicationContact}`} target="_blank" rel="noopener noreferrer" className="w-full block text-center bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 font-bold transition">Aplicar (Email/Link)</a> 
+                                {isJob && listing.applicationContact && (
+                                    <a href={listing.applicationContact.startsWith('http') ? listing.applicationContact : `mailto:${listing.applicationContact}`} target="_blank" rel="noopener noreferrer" className="w-full block text-center bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 font-bold transition">Aplicar (Email/Link)</a>
                                 )}
-                            </div> 
+                            </div>
                         )}
                     </div>
                 </div>
             </div>
-            <Lightbox open={lightboxOpen} close={() => setLightboxOpen(false)} slides={slides} index={lightboxIndex} /> 
-        </> 
-    ); 
+            <Lightbox open={lightboxOpen} close={() => setLightboxOpen(false)} slides={slides} index={lightboxIndex} />
+        </>
+    );
 }
 
-function AccountSettings({ user, setUser }) { const [displayName, setDisplayName] = useState(user?.displayName || ''); const [isSaving, setIsSaving] = useState(false); const [photoFile, setPhotoFile] = useState(null); const [photoPreview, setPhotoPreview] = useState(user?.photoURL || ''); const [businessInfo, setBusinessInfo] = useState({ businessName: '', website: '' }); const fileInputRef = useRef(null); useEffect(() => { if (user) { setDisplayName(user.displayName || ''); setPhotoPreview(user.photoURL || ''); setBusinessInfo({ businessName: user.businessName || '', website: user.website || '' }); } }, [user]); const handlePhotoChange = (e) => { if (e.target.files[0]) { setPhotoFile(e.target.files[0]); setPhotoPreview(URL.createObjectURL(e.target.files[0])); } }; const handleSave = async (e) => { e.preventDefault(); setIsSaving(true); try { let newPhotoURL = user.photoURL; if (photoFile) { const photoRef = ref(storage, `profile-pictures/${user.uid}`); await uploadBytes(photoRef, photoFile); newPhotoURL = await getDownloadURL(photoRef); } const updatedData = { displayName, photoURL: newPhotoURL, businessName: businessInfo.businessName, website: businessInfo.website }; await updateProfile(auth.currentUser, { displayName, photoURL: newPhotoURL }); const userDocRef = doc(db, "users", user.uid); await updateDoc(userDocRef, updatedData); setUser(prev => ({...prev, ...updatedData})); alert("Perfil actualizado con éxito."); } catch (error) { console.error("Error al actualizar perfil:", error); alert("Hubo un error al actualizar tu perfil."); } setIsSaving(false); }; return ( <div className="bg-white p-8 rounded-lg shadow-lg max-w-2xl mx-auto"><h2 className="text-2xl font-bold mb-6">Ajustes de Cuenta</h2><form onSubmit={handleSave} className="space-y-6"><div className="flex flex-col items-center"><img src={photoPreview || `https://i.pravatar.cc/150?u=${user?.uid}`} alt="Perfil" className="w-24 h-24 rounded-full mb-4 cursor-pointer" onClick={() => fileInputRef.current.click()} /><input type="file" ref={fileInputRef} onChange={handlePhotoChange} className="hidden" accept="image/*" /><button type="button" onClick={() => fileInputRef.current.click()} className="text-sm text-blue-600 hover:underline">Cambiar foto</button></div><div><label className="block text-sm font-medium text-gray-700">Nombre de Usuario</label><input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required /></div><div className="border-t pt-6"><h3 className="text-lg font-semibold text-gray-800 mb-4">Información de tu Negocio (Opcional)</h3><div><label className="block text-sm font-medium text-gray-700">Nombre del Negocio</label><input type="text" value={businessInfo.businessName} onChange={e => setBusinessInfo({...businessInfo, businessName: e.target.value})} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" /></div><div><label className="block text-sm font-medium text-gray-700 mt-4">Sitio Web o Página Social</label><input type="text" placeholder="https://..." value={businessInfo.website} onChange={e => setBusinessInfo({...businessInfo, website: e.target.value})} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" /></div></div><div className="flex justify-end"><button type="submit" disabled={isSaving} className="bg-blue-600 text-white px-4 py-2 rounded-lg disabled:bg-blue-300 flex items-center">{isSaving && <SpinnerIcon />}{isSaving ? 'Guardando...' : 'Guardar Cambios'}</button></div></form></div> ); }
+function AccountSettings({ user, setUser }) {
+    const [displayName, setDisplayName] = useState(user?.displayName || '');
+    const [isSaving, setIsSaving] = useState(false);
+    const [photoFile, setPhotoFile] = useState(null);
+    const [photoPreview, setPhotoPreview] = useState(user?.photoURL || '');
+    const fileInputRef = useRef(null);
+
+    // --- ESTADO PARA EL PERFIL DE EMPRESA ---
+    const [companyInfo, setCompanyInfo] = useState({ name: '', description: '', website: '' });
+    const [companyLogoFile, setCompanyLogoFile] = useState(null);
+    const [companyLogoPreview, setCompanyLogoPreview] = useState('');
+    const companyLogoInputRef = useRef(null);
+
+    useEffect(() => {
+        if (user) {
+            setDisplayName(user.displayName || '');
+            setPhotoPreview(user.photoURL || '');
+            // --- CARGA DE DATOS DE LA EMPRESA ---
+            setCompanyInfo({
+                name: user.companyProfile?.name || '',
+                description: user.companyProfile?.description || '',
+                website: user.companyProfile?.website || ''
+            });
+            setCompanyLogoPreview(user.companyProfile?.logoUrl || '');
+        }
+    }, [user]);
+
+    const handlePhotoChange = (e) => {
+        if (e.target.files[0]) {
+            setPhotoFile(e.target.files[0]);
+            setPhotoPreview(URL.createObjectURL(e.target.files[0]));
+        }
+    };
+
+    const handleCompanyLogoChange = (e) => {
+        if (e.target.files[0]) {
+            setCompanyLogoFile(e.target.files[0]);
+            setCompanyLogoPreview(URL.createObjectURL(e.target.files[0]));
+        }
+    };
+
+    const handleSave = async (e) => {
+        e.preventDefault();
+        setIsSaving(true);
+        try {
+            let newPhotoURL = user.photoURL;
+            let companyProfileData = { ...companyInfo };
+
+            if (photoFile) {
+                const photoRef = ref(storage, `profile-pictures/${user.uid}`);
+                await uploadBytes(photoRef, photoFile);
+                newPhotoURL = await getDownloadURL(photoRef);
+            }
+
+            // --- LÓGICA PARA SUBIR LOGO DE EMPRESA ---
+            if (companyLogoFile) {
+                const logoRef = ref(storage, `company-logos/${user.uid}`);
+                await uploadBytes(logoRef, companyLogoFile);
+                const newLogoUrl = await getDownloadURL(logoRef);
+                companyProfileData.logoUrl = newLogoUrl;
+            } else {
+                 companyProfileData.logoUrl = user.companyProfile?.logoUrl || '';
+            }
+
+            const updatedData = {
+                displayName,
+                photoURL: newPhotoURL,
+                companyProfile: companyProfileData
+            };
+            
+            await updateProfile(auth.currentUser, { displayName, photoURL: newPhotoURL });
+            const userDocRef = doc(db, "users", user.uid);
+            await updateDoc(userDocRef, updatedData);
+            setUser(prev => ({...prev, ...updatedData}));
+            alert("Perfil actualizado con éxito.");
+
+        } catch (error) {
+            console.error("Error al actualizar perfil:", error);
+            alert("Hubo un error al actualizar tu perfil.");
+        }
+        setIsSaving(false);
+    };
+
+    return (
+        <div className="bg-white p-8 rounded-lg shadow-lg max-w-2xl mx-auto">
+            <h2 className="text-2xl font-bold mb-6">Ajustes de Cuenta</h2>
+            <form onSubmit={handleSave} className="space-y-6">
+                <div className="flex flex-col items-center">
+                    <img src={photoPreview || `https://i.pravatar.cc/150?u=${user?.uid}`} alt="Perfil" className="w-24 h-24 rounded-full mb-4 cursor-pointer" onClick={() => fileInputRef.current.click()} />
+                    <input type="file" ref={fileInputRef} onChange={handlePhotoChange} className="hidden" accept="image/*" />
+                    <button type="button" onClick={() => fileInputRef.current.click()} className="text-sm text-blue-600 hover:underline">Cambiar foto</button>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700">Nombre de Usuario</label>
+                    <input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required />
+                </div>
+                
+                {/* --- FORMULARIO DE PERFIL DE EMPRESA --- */}
+                <div className="border-t pt-6">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Perfil de Empresa (para publicar empleos)</h3>
+                    <div className="flex items-center space-x-4 mb-4">
+                        <img src={companyLogoPreview || 'https://placehold.co/100x100/e2e8f0/64748b?text=Logo'} alt="Logo Empresa" className="w-24 h-24 rounded-md object-cover bg-gray-100" />
+                        <div>
+                            <input type="file" ref={companyLogoInputRef} onChange={handleCompanyLogoChange} className="hidden" accept="image/*" />
+                            <button type="button" onClick={() => companyLogoInputRef.current.click()} className="text-sm text-blue-600 hover:underline">Cambiar logo</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Nombre de la Empresa</label>
+                        <input type="text" value={companyInfo.name} onChange={e => setCompanyInfo({...companyInfo, name: e.target.value})} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
+                    </div>
+                    <div className="mt-4">
+                        <label className="block text-sm font-medium text-gray-700">Descripción de la Empresa</label>
+                        <textarea value={companyInfo.description} onChange={e => setCompanyInfo({...companyInfo, description: e.target.value})} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" rows="3"></textarea>
+                    </div>
+                    <div className="mt-4">
+                        <label className="block text-sm font-medium text-gray-700">Sitio Web</label>
+                        <input type="text" placeholder="https://..." value={companyInfo.website} onChange={e => setCompanyInfo({...companyInfo, website: e.target.value})} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
+                    </div>
+                </div>
+
+                <div className="flex justify-end">
+                    <button type="submit" disabled={isSaving} className="bg-blue-600 text-white px-4 py-2 rounded-lg disabled:bg-blue-300 flex items-center">
+                        {isSaving ? <SpinnerIcon /> : 'Guardar Cambios'}
+                    </button>
+                </div>
+            </form>
+        </div>
+    );
+}
+
 function MyListings({ user, setView }) { const [myListings, setMyListings] = useState([]); const [loading, setLoading] = useState(true); const [showDeleteModal, setShowDeleteModal] = useState(null); const [showSoldModal, setShowSoldModal] = useState(null); useEffect(() => { if (!user) return; const q = query(collection(db, "listings"), where("userId", "==", user.uid), orderBy("createdAt", "desc")); const unsubscribe = onSnapshot(q, (snapshot) => { setMyListings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); setLoading(false); }); return () => unsubscribe(); }, [user]); const handleDelete = async (listingToDelete) => { if (!listingToDelete) return; try { if (listingToDelete.photos && listingToDelete.photos.length > 0) { const deletePromises = listingToDelete.photos.map(photo => { try { const fullRef = ref(storage, photo.full); const thumbRef = ref(storage, photo.thumb); return Promise.all([deleteObject(fullRef), deleteObject(thumbRef)]); } catch (e) { console.warn("No se pudo borrar la foto:", e.message); return Promise.resolve(); } }); await Promise.all(deletePromises); } await deleteDoc(doc(db, "listings", listingToDelete.id)); alert("Anuncio eliminado."); } catch (error) { console.error("Error eliminando:", error); alert("Error al eliminar."); } finally { setShowDeleteModal(null); } }; const handleMarkAsSold = async (listingToMark) => { if (!listingToMark) return; try { await updateDoc(doc(db, "listings", listingToMark.id), { status: 'sold' }); alert("Anuncio marcado como vendido."); } catch (error) { console.error("Error marcando como vendido:", error); alert("Error al actualizar."); } finally { setShowSoldModal(null); } }; return ( <> <div className="bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto"><h2 className="text-2xl font-bold mb-6">Mis Anuncios</h2>{loading ? <p>Cargando...</p> : !myListings.length ? <p>No has publicado nada.</p> : <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">{myListings.map(listing => ( <div key={listing.id} className={`border rounded-lg p-2 flex flex-col justify-between ${listing.status !== 'active' ? 'bg-gray-100 opacity-60' : ''}`}><div><img src={listing.photos?.[0]?.thumb || `https://placehold.co/600x400/e2e8f0/64748b?text=${listing.type}`} className="w-full h-32 object-cover rounded-md" /><h3 className="font-semibold truncate mt-2">{listing.title}</h3>{listing.status === 'sold' && <p className="text-sm font-bold text-green-600">VENDIDO</p>}</div><div className="flex gap-2 mt-2"><button onClick={() => setView({ page: 'publish', type: listing.type, listingId: listing.id })} className="w-full bg-blue-500 text-white text-sm font-semibold py-1 rounded-md hover:bg-blue-600">Editar</button>{listing.status === 'active' && listing.type === 'producto' && <button onClick={() => setShowSoldModal(listing)} className="w-full bg-green-500 text-white text-sm font-semibold py-1 rounded-md hover:bg-green-600">Vendido</button>}<button onClick={() => setShowDeleteModal(listing)} className="w-full bg-red-500 text-white text-sm font-semibold py-1 rounded-md hover:bg-red-600">Eliminar</button></div></div> ))}</div>}</div> {showDeleteModal && ( <ConfirmationModal message="¿Seguro que quieres eliminar este anuncio?" onConfirm={() => handleDelete(showDeleteModal)} onCancel={() => setShowDeleteModal(null)} /> )} {showSoldModal && ( <ConfirmationModal message="¿Marcar como vendido? No será visible en búsquedas." onConfirm={() => handleMarkAsSold(showSoldModal)} onCancel={() => setShowSoldModal(null)} /> )} </> ); }
 function FavoritesPage({ user, setView }) { const [favorites, setFavorites] = useState([]); const [loading, setLoading] = useState(true); useEffect(() => { if (!user) return; const q = query(collection(db, "users", user.uid, "favorites"), orderBy("addedAt", "desc")); const unsubscribe = onSnapshot(q, (snapshot) => { setFavorites(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); setLoading(false); }); return () => unsubscribe(); }, [user]); return ( <div className="container mx-auto"><h1 className="text-3xl font-bold mb-8">Mis Favoritos</h1>{loading ? <ListingsSkeleton /> : ( <> <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">{favorites.map(listing => <ListingCard key={listing.id} listing={listing} setView={setView} user={user} />)}</div> {!loading && favorites.length === 0 && <p className="text-center text-gray-500 mt-8">No has guardado favoritos.</p>} </> )}</div> ); }
 function ConfirmationModal({ message, onConfirm, onCancel }) { return ( <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"><div className="bg-white rounded-lg p-6 max-w-sm mx-4"><p className="text-lg mb-4">{message}</p><div className="flex justify-end gap-4"><button onClick={onCancel} className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300">Cancelar</button><button onClick={onConfirm} className="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600">Confirmar</button></div></div></div> ); }
-function ChatPage({ activeChat, setActiveChat, currentUser, setUnreadChats, unreadChats }) { 
+function ChatPage({ activeChat, setActiveChat, currentUser, setUnreadChats, unreadChats }) {
     const [conversations, setConversations] = useState([]);
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
@@ -455,8 +595,8 @@ function ChatPage({ activeChat, setActiveChat, currentUser, setUnreadChats, unre
     useEffect(() => {
         if (!currentUser) return;
         const q = query(
-            collection(db, "chats"), 
-            where("participants", "array-contains", currentUser.uid), 
+            collection(db, "chats"),
+            where("participants", "array-contains", currentUser.uid),
             orderBy("updatedAt", "desc")
         );
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -692,7 +832,7 @@ function NotificationPreferences({ user, setUser }) {
             <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <label htmlFor="new-messages" className="font-medium text-gray-700">Nuevos Mensajes</label>
-                    <div 
+                    <div
                         onClick={() => handleToggle('newMessages')}
                         className={`w-14 h-8 flex items-center bg-gray-300 rounded-full p-1 cursor-pointer transition-colors ${prefs.newMessages ? 'bg-blue-600' : ''}`}
                     >
@@ -701,7 +841,7 @@ function NotificationPreferences({ user, setUser }) {
                 </div>
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <label htmlFor="new-jobs" className="font-medium text-gray-700">Nuevas Ofertas de Empleo</label>
-                     <div 
+                     <div
                         onClick={() => handleToggle('newJobs')}
                         className={`w-14 h-8 flex items-center bg-gray-300 rounded-full p-1 cursor-pointer transition-colors ${prefs.newJobs ? 'bg-blue-600' : ''}`}
                     >
@@ -718,7 +858,7 @@ function NotificationPreferences({ user, setUser }) {
     );
 }
 
-// --- NUEVO COMPONENTE DE PÁGINA DE PERFIL PÚBLICO ---
+// --- PÁGINA DE PERFIL PÚBLICO ---
 function PublicProfilePage({ userId, setView, user }) {
     const [profile, setProfile] = useState(null);
     const [userListings, setUserListings] = useState([]);
@@ -789,6 +929,88 @@ function PublicProfilePage({ userId, setView, user }) {
                     </div>
                 ) : (
                     <p className="text-gray-500">Este vendedor no tiene anuncios activos en este momento.</p>
+                )}
+            </div>
+        </div>
+    );
+}
+
+
+// --- NUEVO COMPONENTE DE PÁGINA DE PERFIL DE EMPRESA ---
+function CompanyProfilePage({ userId, setView, user }) {
+    const [companyProfile, setCompanyProfile] = useState(null);
+    const [companyListings, setCompanyListings] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchCompanyData = async () => {
+            if (!userId) return;
+            setLoading(true);
+            try {
+                // 1. Obtener el perfil del usuario (que contiene el perfil de la empresa)
+                const userDocRef = doc(db, 'users', userId);
+                const userSnap = await getDoc(userDocRef);
+
+                if (userSnap.exists() && userSnap.data().companyProfile) {
+                    setCompanyProfile(userSnap.data().companyProfile);
+                }
+
+                // 2. Obtener los anuncios de tipo 'trabajo' de este usuario
+                const listingsQuery = query(
+                    collection(db, 'listings'),
+                    where('userId', '==', userId),
+                    where('type', '==', 'trabajo'), // Solo empleos
+                    where('status', '==', 'active'),
+                    orderBy('createdAt', 'desc')
+                );
+                const listingsSnapshot = await getDocs(listingsQuery);
+                const listingsData = listingsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setCompanyListings(listingsData);
+
+            } catch (error) {
+                console.error("Error al cargar el perfil de la empresa:", error);
+            }
+            setLoading(false);
+        };
+
+        fetchCompanyData();
+    }, [userId]);
+
+    if (loading) {
+        return <div className="text-center p-10">Cargando perfil de la empresa...</div>;
+    }
+
+    if (!companyProfile) {
+        return <div className="text-center p-10">Perfil de empresa no encontrado o no configurado.</div>;
+    }
+
+    return (
+        <div className="container mx-auto">
+            {/* Sección de Información de la Empresa */}
+            <div className="bg-white p-6 rounded-lg shadow-md mb-8 flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6">
+                <img src={companyProfile.logoUrl || 'https://placehold.co/150x150/e2e8f0/64748b?text=Logo'} alt={companyProfile.name} className="w-32 h-32 rounded-lg border-4 border-gray-200 object-cover" />
+                <div className="text-center sm:text-left">
+                    <h1 className="text-3xl font-bold">{companyProfile.name}</h1>
+                    <p className="text-gray-600 mt-2">{companyProfile.description}</p>
+                    {companyProfile.website && (
+                         <a href={companyProfile.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline mt-2 inline-block">
+                            Visitar sitio web
+                         </a>
+                    )}
+                </div>
+            </div>
+
+            {/* Sección de Vacantes Activas */}
+            <div>
+                <h2 className="text-2xl font-bold text-gray-800 mb-6">Vacantes Activas</h2>
+                {companyListings.length > 0 ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                        {companyListings.map(listing => (
+                            <ListingCard key={listing.id} listing={listing} setView={setView} user={user} />
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-gray-500">Esta empresa no tiene vacantes activas en este momento.</p>
                 )}
             </div>
         </div>
