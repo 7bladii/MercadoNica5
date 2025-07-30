@@ -187,7 +187,7 @@ export default function App() {
                 };
 
                 await setDoc(chatRef, {
-                    participants: [currentUserAuth.uid, chatInfo.recipientId],
+                    participants: [currentUserAuth.uid, chatInfo.recipientId].sort(),
                     participantInfo: {
                         [currentUserAuth.uid]: currentUserData,
                         [chatInfo.recipientId]: recipientData
