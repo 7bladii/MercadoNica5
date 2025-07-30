@@ -74,7 +74,6 @@ const analytics = getAnalytics(app);
 try { enableIndexedDbPersistence(db, { cacheSizeBytes: CACHE_SIZE_UNLIMITED }); } catch (error) { console.error("Error al inicializar la persistencia de Firestore:", error); }
 
 // --- ICONOS ---
-// (Tu código de íconos SVG se queda igual)
 const BellIcon = ({ hasNotification, className }) => ( <div className="relative"><svg xmlns="http://www.w3.org/2000/svg" className={className || "h-7 w-7"} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>{hasNotification && <span className="absolute top-0 right-0 block h-3 w-3 rounded-full bg-red-500 ring-2 ring-white"></span>}</div>);
 const BriefcaseIcon = ({className}) => (<svg xmlns="http://www.w3.org/2000/svg" className={className || "h-12 w-12 text-blue-500"} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>);
 const ArrowLeftIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" /></svg>;
@@ -95,11 +94,53 @@ const QuestionMarkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className
 const ChevronRightIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>;
 const StarIcon = ({ filled }) => <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${filled ? 'text-yellow-400' : 'text-gray-300'}`} viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>;
 
+// ==================================================================
+// --- INICIO DE LA DEFINICIÓN DE COMPONENTES ---
+// ==================================================================
 
-// --- COMPONENTE PARA SOLICITAR INICIO DE SESIÓN ---
-// ... (sin cambios)
+function PleaseLogIn({ onLogin }) {
+    return (
+        <div className="text-center p-8 max-w-md mx-auto bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Inicia Sesión para Continuar</h2>
+            <p className="text-gray-600 mb-6">Necesitas una cuenta para poder acceder a esta página.</p>
+            <button 
+                onClick={onLogin} 
+                className="bg-green-500 text-white font-semibold px-6 py-3 rounded-lg hover:bg-green-600 transition-colors"
+            >
+                Iniciar Sesión con Google
+            </button>
+        </div>
+    );
+}
 
+function BackButton({ onClick }) { return ( <button onClick={onClick} className="flex items-center text-gray-600 hover:text-gray-900 font-semibold mb-4"><ArrowLeftIcon /> Volver</button> ); }
+function Header({ user, onLogin, onLogout, setView, goHome, notificationCount }) { return ( <header className="bg-white/80 backdrop-blur-sm shadow-md sticky top-0 z-50 hidden md:block"><nav className="container mx-auto px-4 py-3 flex justify-between items-center"><div className="flex items-center cursor-pointer" onClick={goHome}><span className="text-2xl font-bold text-blue-600">Mercado<span className="text-sky-500">Nica</span></span></div><div className="flex items-center space-x-4">{user && user.uid === ADMIN_UID && <button onClick={() => setView({ page: 'adminDashboard' })} className="text-sm font-semibold text-blue-600 hover:underline">Admin</button>}{user && <div className="cursor-pointer" onClick={() => setView({ page: 'messages' })}><BellIcon hasNotification={notificationCount > 0} /></div>}{user ? (<div className="relative group"><img src={user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`} alt="Perfil" className="w-10 h-10 rounded-full cursor-pointer" /><div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-20 hidden group-hover:block"><span className="block px-4 py-2 text-sm text-gray-700 font-semibold truncate">{user.displayName}</span><a href="#" onClick={(e) => {e.preventDefault(); setView({ page: 'account' })}} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Mi Cuenta</a><a href="#" onClick={(e) => {e.preventDefault(); onLogout()}} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cerrar Sesión</a></div></div>) : ( <button onClick={onLogin} className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">Iniciar Sesión</button> )}</div></nav></header> ); }
+function Footer() { return ( <footer className="bg-white/80 backdrop-blur-sm mt-12 py-6 border-t hidden md:block"><div className="container mx-auto text-center text-gray-600"><p>&copy; {new Date().getFullYear()} MercadoNica. Todos los derechos reservados.</p></div></footer> ); }
+function BottomNavBar({ setView, currentView, goHome, hasUnreadMessages }) { const handlePublishClick = () => { setView({ page: 'publish', type: 'producto' }) }; const navItems = [ { name: 'Inicio', icon: HomeIcon, page: 'home', action: goHome }, { name: 'Mensajes', icon: MessagesIcon, page: 'messages', action: () => setView({ page: 'messages' }), notification: hasUnreadMessages }, { name: 'Publicar', icon: PlusCircleIcon, page: 'publish', action: handlePublishClick, isCentral: true }, { name: 'Anuncios', icon: ListingsIcon, page: 'myListings', action: () => setView({ page: 'myListings' }) }, { name: 'Cuenta', icon: AccountIcon, page: 'account', action: () => setView({ page: 'account' }) }, ]; return ( <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-t shadow-lg z-50"><div className="flex justify-around items-center h-16">{navItems.map(item => { const isActive = item.page === 'account' ? ['account', 'accountSettings', 'myListings', 'favorites', 'notificationPreferences'].includes(currentView.page) : currentView.page === item.page; const Icon = item.icon; if (item.isCentral) { return ( <button key={item.name} onClick={item.action} className="bg-blue-600 rounded-full w-14 h-14 flex items-center justify-center -mt-6 shadow-lg"><Icon /></button> ); } return ( <button key={item.name} onClick={item.action} className="flex flex-col items-center justify-center text-xs w-16"><Icon isActive={isActive} hasNotification={item.notification} /><span className={`mt-1 truncate ${isActive ? 'text-blue-600' : 'text-gray-500'}`}>{item.name}</span></button> ); })}</div></div> ); }
+function HomePage({ setView }) { const [recentListings, setRecentListings] = useState([]); const [loading, setLoading] = useState(true); useEffect(() => { const q = query( collection(db, "listings"), where("type", "==", "producto"), where("status", "==", "active"), orderBy("createdAt", "desc"), limit(8) ); const unsubscribe = onSnapshot(q, (snapshot) => { const listingsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); setRecentListings(listingsData); setLoading(false); }); return () => unsubscribe(); }, []); return ( <div className="container mx-auto"><div className="bg-white p-6 rounded-lg shadow-lg mb-8 text-center"><h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">Bienvenido a MercadoNica</h1><p className="text-gray-600 text-lg">Tu plataforma para comprar, vender y encontrar empleo en Nicaragua.</p></div><div onClick={() => setView({ page: 'listings', type: 'trabajo' })} className="bg-blue-600 text-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow cursor-pointer flex items-center justify-between mb-12"><div><h2 className="text-2xl font-bold">¿Buscas Empleo?</h2><p className="opacity-90">Explora las últimas vacantes o publica una oferta.</p></div><BriefcaseIcon className="h-12 w-12 text-white opacity-80" /></div><div className="mb-12"><h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Artículos Recientes</h2>{loading ? <ListingsSkeleton /> : ( <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">{recentListings.map(listing => <ListingCard key={listing.id} listing={listing} setView={setView} user={null} />)}</div> )}<div className="text-center mt-8"><button onClick={() => setView({ page: 'listings', type: 'producto' })} className="bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">Ver todos los artículos</button></div></div></div> ); }
+function ListingsPage({ type, setView, user }) { const [allListings, setAllListings] = useState([]); const [filteredListings, setFilteredListings] = useState([]); const [loading, setLoading] = useState(true); const [searchTerm, setSearchTerm] = useState(''); const [selectedCity, setSelectedCity] = useState(''); const [selectedCategory, setSelectedCategory] = useState(''); const pageTitle = type === 'producto' ? 'Artículos en Venta' : 'Ofertas de Empleo'; const publishButtonText = type === 'producto' ? 'Vender Artículo' : 'Publicar Empleo'; const categories = type === 'producto' ? productCategories : jobCategories; useEffect(() => { setLoading(true); const q = query( collection(db, "listings"), where("type", "==", type), where("status", "==", "active"), orderBy("createdAt", "desc") ); const unsubscribe = onSnapshot(q, (snapshot) => { const listingsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); setAllListings(listingsData); setFilteredListings(listingsData); setLoading(false); }, (error) => { console.error("Error fetching listings:", error); setLoading(false); }); return () => unsubscribe(); }, [type]); useEffect(() => { let result = allListings; if (searchTerm) { result = result.filter(listing => listing.title.toLowerCase().includes(searchTerm.toLowerCase())); } if (selectedCity) { result = result.filter(listing => listing.location === selectedCity); } if (selectedCategory) { result = result.filter(listing => listing.category === selectedCategory); } setFilteredListings(result); }, [searchTerm, selectedCity, selectedCategory, allListings]); return ( <div className="container mx-auto"><div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4"><h1 className="text-3xl font-bold">{pageTitle}</h1><div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto"><input type="text" placeholder="Buscar por título..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="border-gray-300 rounded-md shadow-sm w-full sm:w-auto" /><select value={selectedCity} onChange={e => setSelectedCity(e.target.value)} className="border-gray-300 rounded-md shadow-sm w-full sm:w-auto"><option value="">Todas las Ciudades</option>{nicaraguaCities.map(city => <option key={city} value={city}>{city}</option>)}</select><select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="border-gray-300 rounded-md shadow-sm w-full sm:w-auto"><option value="">Todas las Categorías</option>{categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}</select></div><button onClick={() => setView({ page: 'publish', type: type })} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 w-full md:w-auto">{publishButtonText}</button></div>{loading ? <ListingsSkeleton /> : ( <> <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">{filteredListings.map(listing => <ListingCard key={listing.id} listing={listing} setView={setView} user={user} />)}</div> {!loading && filteredListings.length === 0 && <p className="text-center text-gray-500 mt-8">No se encontraron anuncios que coincidan con tu búsqueda.</p>} </> )}</div> ); }
+function ListingsSkeleton() { return ( <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">{Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}</div> ); }
+function SkeletonCard() { return ( <div className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse"><div className="w-full h-48 bg-gray-300"></div><div className="p-4 space-y-3"><div className="h-4 bg-gray-300 rounded w-1/3"></div><div className="h-6 bg-gray-300 rounded w-full"></div><div className="h-4 bg-gray-300 rounded w-1/2"></div><div className="h-8 bg-gray-300 rounded w-1/3"></div></div></div> ); }
+function ListingCard({ listing, setView, user }) { const placeholderUrl = `https://placehold.co/400x400/e2e8f0/64748b?text=${listing.type === 'producto' ? 'Producto' : 'Empleo'}`; const [isFavorite, setIsFavorite] = useState(false); useEffect(() => { if (!user) return; const favRef = doc(db, "users", user.uid, "favorites", listing.id); const unsubscribe = onSnapshot(favRef, (doc) => { setIsFavorite(doc.exists()); }); return () => unsubscribe(); }, [user, listing.id]); const toggleFavorite = async (e) => { e.stopPropagation(); if (!user) { alert("Debes iniciar sesión para guardar favoritos."); return; } const favRef = doc(db, "users", user.uid, "favorites", listing.id); if (isFavorite) { await deleteDoc(favRef); } else { await setDoc(favRef, { ...listing, addedAt: serverTimestamp() }); } }; const isJob = listing.type === 'trabajo'; const imageUrl = listing.photos?.[0]?.thumb || placeholderUrl; return ( <div onClick={() => setView({ page: 'listingDetail', listingId: listing.id })} className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col group transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer"><div className="relative"><img src={imageUrl} alt={listing.title} className="w-full aspect-square object-cover" />{user && ( <button onClick={toggleFavorite} className="absolute top-2 right-2 bg-white p-2 rounded-full shadow-md transition-opacity opacity-0 group-hover:opacity-100"><HeartIcon isFavorite={isFavorite} className={`w-6 h-6 ${isFavorite ? 'text-red-500' : 'text-gray-400'}`} /></button> )}{listing.photos && listing.photos.length > 1 && ( <div className="absolute top-2 left-2 bg-black bg-opacity-60 text-white text-xs font-bold px-2 py-1 rounded-md flex items-center"><CameraIcon /><span className="ml-1">{listing.photos.length}</span></div> )}</div><div className="p-4 flex-grow flex flex-col space-y-1"><span className="text-xs font-semibold text-gray-500 uppercase">{listing.category}</span><h3 className="font-semibold text-gray-800 h-12 line-clamp-2">{listing.title}</h3><p className="text-gray-600 text-sm flex-grow">{listing.location}</p><div className="pt-2">{isJob ? ( <p className="text-md font-bold text-blue-600">{listing.salary || 'Salario a convenir'}</p> ) : ( <p className="text-lg font-extrabold text-blue-700">{listing.price ? `C$ ${new Intl.NumberFormat('es-NI').format(listing.price)}` : 'Consultar'}</p> )}</div></div></div> ); }
+function PublishPage({ type, setView, user, listingId }) { const isJob = type === 'trabajo'; const [formData, setFormData] = useState({ title: '', description: '', category: '', price: '', companyName: '', salary: '', make: '', model: '', year: '', mileage: '', applicationContact: '' }); const [location, setLocation] = useState(''); const [newImageFiles, setNewImageFiles] = useState([]); const [existingPhotos, setExistingPhotos] = useState([]); const [isSubmitting, setIsSubmitting] = useState(false); const [errors, setErrors] = useState({}); const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 }); const categories = isJob ? jobCategories : productCategories; const isEditing = !!listingId; useEffect(() => { if (isEditing) { const fetchListing = async () => { const docRef = doc(db, "listings", listingId); const docSnap = await getDoc(docRef); if (docSnap.exists()) { const data = docSnap.data(); setFormData({ title: data.title, description: data.description, category: data.category || '', price: data.price || '', companyName: data.companyName || '', salary: data.salary || '', make: data.make || '', model: data.model || '', year: data.year || '', mileage: data.mileage || '', applicationContact: data.applicationContact || '' }); setLocation(data.location); setExistingPhotos(data.photos || []); } }; fetchListing(); } }, [listingId, isEditing]); const validateForm = () => { const newErrors = {}; if (!formData.title.trim()) newErrors.title = "El título es obligatorio."; else if (formData.title.trim().length < 5) newErrors.title = "El título debe tener al menos 5 caracteres."; if (!isJob && !formData.category) newErrors.category = "Debes seleccionar una categoría."; if (!location) newErrors.location = "Debes seleccionar una ubicación."; if (!formData.description.trim()) newErrors.description = "La descripción es obligatoria."; else if (formData.description.trim().length < 15) newErrors.description = "La descripción debe ser más detallada (mínimo 15 caracteres)."; if (!isJob && existingPhotos.length === 0 && newImageFiles.length === 0) newErrors.images = "Debes subir al menos una foto para el artículo."; setErrors(newErrors); return Object.keys(newErrors).length === 0; }; const handleImageChange = (e) => { if (e.target.files) { const filesArray = Array.from(e.target.files); const currentImagesCount = existingPhotos.length + newImageFiles.length; const maxImages = isJob ? 1 : 12; if (currentImagesCount + filesArray.length > maxImages) { setErrors(prev => ({ ...prev, images: `No puedes subir más de ${maxImages} ${isJob ? 'logo/foto' : 'fotos'}.` })); return; } const validFiles = []; for (const file of filesArray) { if (file.size > 5 * 1024 * 1024) { setErrors(prev => ({ ...prev, images: `La imagen "${file.name}" es muy grande (máx 5MB).` })); continue; } if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) { setErrors(prev => ({ ...prev, images: `El archivo "${file.name}" no es una imagen válida.` })); continue; } validFiles.push(file); } if (isJob) { setNewImageFiles(validFiles); } else { setNewImageFiles(prev => [...prev, ...validFiles]); } if (errors.images) setErrors(prev => ({ ...prev, images: null })); } }; const removeNewImage = (index) => { setNewImageFiles(prev => prev.filter((_, i) => i !== index)); }; const removeExistingImage = (index) => { setExistingPhotos(prev => prev.filter((_, i) => i !== index)); }; const handleSubmit = async (e) => { e.preventDefault(); if (!user) { setErrors({ form: "Debes iniciar sesión para publicar." }); return; } if (!validateForm()) return; setIsSubmitting(true); setErrors({}); try { const uploadAndGetURLs = async (file) => { const timestamp = Date.now(); const randomId = Math.random().toString(36).substring(2, 8); const baseName = `${user.uid}/${timestamp}_${randomId}_${file.name}`; const fullImg = await imageCompression(file, { maxSizeMB: 1.5, maxWidthOrHeight: 1920 }); const fullImgRef = ref(storage, `listings/${baseName}_full.jpg`); await uploadBytes(fullImgRef, fullImg); const fullUrl = await getDownloadURL(fullImgRef); const thumbImg = await imageCompression(file, { maxSizeMB: 0.1, maxWidthOrHeight: 400 }); const thumbImgRef = ref(storage, `listings/${baseName}_thumb.jpg`); await uploadBytes(thumbImgRef, thumbImg); const thumbUrl = await getDownloadURL(thumbImgRef); return { full: fullUrl, thumb: thumbUrl }; }; setUploadProgress({ current: 0, total: newImageFiles.length }); const newPhotoObjects = []; for (let i = 0; i < newImageFiles.length; i++) { const file = newImageFiles[i]; const urls = await uploadAndGetURLs(file); newPhotoObjects.push(urls); setUploadProgress({ current: i + 1, total: newImageFiles.length }); } const allPhotos = [...existingPhotos, ...newPhotoObjects]; const listingData = { title: formData.title, description: formData.description, category: formData.category, location, type, photos: allPhotos, userId: user.uid, userName: user.displayName, userPhotoURL: user.photoURL, status: 'active', updatedAt: serverTimestamp(), }; if (isJob) { listingData.companyName = formData.companyName; listingData.salary = formData.salary; listingData.applicationContact = formData.applicationContact; } else { listingData.price = Number(formData.price) || 0; listingData.make = formData.make; listingData.model = formData.model; listingData.year = formData.year; listingData.mileage = formData.mileage; } if (isEditing) { const docRef = doc(db, "listings", listingId); await updateDoc(docRef, listingData); } else { const newDocRef = await addDoc(collection(db, "listings"), { ...listingData, createdAt: serverTimestamp() }); logEvent(analytics, 'publish_listing', { user_id: user.uid, listing_id: newDocRef.id, listing_type: type, category: listingData.category, location: listingData.location, }); } setView({ page: 'listings', type: type }); } catch (error) { console.error("Error al publicar:", error); setErrors({ form: "Hubo un error al publicar. Revisa tu conexión o inténtalo más tarde." }); } finally { setIsSubmitting(false); setUploadProgress({ current: 0, total: 0 }); } }; const showVehicleFields = formData.category === 'Autos y Vehículos' || formData.category === 'Motos'; const allPreviews = [ ...existingPhotos.map((photo, index) => ({ type: 'existing', url: photo.thumb, index })), ...newImageFiles.map((file, index) => ({ type: 'new', url: URL.createObjectURL(file), index })) ]; return ( <div className="container mx-auto max-w-2xl"><div className="bg-white p-8 rounded-lg shadow-lg"><h2 className="text-2xl font-bold mb-6 text-center">{isEditing ? 'Editar' : 'Publicar'} {isJob ? 'Empleo' : 'Artículo'}</h2><form onSubmit={handleSubmit} className="space-y-4">{errors.form && <p className="text-red-500 text-sm bg-red-100 p-2 rounded-md">{errors.form}</p>}<div><input type="text" placeholder={isJob ? "Título del Puesto" : "Título del anuncio"} value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.title ? 'border-red-500' : ''}`} />{errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}</div><div><select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.category && !isJob ? 'border-red-500' : ''}`}><option value="">{isJob ? "Selecciona una Categoría (Opcional)" : "Selecciona una Categoría"}</option>{categories.map(c => <option key={c} value={c}>{c}</option>)}</select>{errors.category && !isJob && <p className="text-red-500 text-xs mt-1">{errors.category}</p>}</div>{showVehicleFields && ( <div className="p-4 border rounded-md bg-gray-50 space-y-4"><h3 className="font-semibold text-gray-700">Detalles del Vehículo</h3><div><input type="text" placeholder="Marca (Ej: Toyota)" value={formData.make} onChange={e => setFormData({ ...formData, make: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" /></div><div><input type="text" placeholder="Modelo (Ej: Hilux)" value={formData.model} onChange={e => setFormData({ ...formData, model: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" /></div><div><input type="number" placeholder="Año (Ej: 2022)" value={formData.year} onChange={e => setFormData({ ...formData, year: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" /></div><div><input type="number" placeholder="Kilometraje (Opcional)" value={formData.mileage} onChange={e => setFormData({ ...formData, mileage: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" /></div></div> )}{isJob && (<> <input type="text" placeholder="Nombre de la Empresa (Opcional)" value={formData.companyName} onChange={e => setFormData({ ...formData, companyName: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" /> <input type="text" placeholder="Email o Link para Aplicar (Opcional)" value={formData.applicationContact} onChange={e => setFormData({ ...formData, applicationContact: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" /> </>)}<div><textarea placeholder={isJob ? "Descripción del puesto, requisitos..." : "Descripción detallada..."} value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.description ? 'border-red-500' : ''}`} rows="4" />{errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}</div>{isJob ? <input type="text" placeholder="Salario (Ej: C$15,000 o A convenir)" value={formData.salary} onChange={e => setFormData({ ...formData, salary: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" /> : <input type="number" placeholder="Precio (C$) (Opcional)" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />}<div><select value={location} onChange={e => setLocation(e.target.value)} className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.location ? 'border-red-500' : ''}`}><option value="">Selecciona una Ciudad</option>{nicaraguaCities.map(c => <option key={c} value={c}>{c}</option>)}</select>{errors.location && <p className="text-red-500 text-xs mt-1">{errors.location}</p>}</div><div><label className="block text-sm font-medium text-gray-700">{isJob ? 'Logo (1 max)' : 'Fotos (12 max)'}</label><div className="mt-2 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">{allPreviews.map((p) => ( <div key={`${p.type}-${p.index}`} className="relative"><img src={p.url} alt={`Preview ${p.index}`} className="h-24 w-24 object-cover rounded-md" /><button type="button" onClick={() => p.type === 'existing' ? removeExistingImage(p.index) : removeNewImage(p.index)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold">&times;</button></div> ))}{allPreviews.length < (isJob ? 1 : 12) && ( <label htmlFor="file-upload" className="flex items-center justify-center w-24 h-24 border-2 border-gray-300 border-dashed rounded-md cursor-pointer hover:border-blue-500"><div className="text-center text-gray-500">+<br />Añadir</div><input id="file-upload" type="file" className="sr-only" onChange={handleImageChange} accept="image/*" multiple={!isJob} /></label> )}{errors.images && <p className="text-red-500 text-xs mt-1">{errors.images}</p>}</div></div><div className="flex justify-end space-x-4 items-center">{isSubmitting && uploadProgress.total > 0 && <span className="text-sm text-gray-500">{`Subiendo ${uploadProgress.current} de ${uploadProgress.total}...`}</span>}<button type="button" onClick={() => setView({ page: 'listings', type: type })} className="bg-gray-200 px-4 py-2 rounded-lg">Cancelar</button><button type="submit" disabled={isSubmitting} className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center disabled:bg-blue-300 min-w-[100px]">{isSubmitting ? <SpinnerIcon /> : (isEditing ? 'Actualizar' : 'Publicar')}</button></div></form></div></div> ); }
+function ListingDetailPage({ listingId, currentUser, navigateToMessages, setView }) { /* ... código ... */ }
+function ConfirmationModal({ message, onConfirm, onCancel }) { /* ... código ... */ }
+function ChatPage({ activeChat, setActiveChat, currentUser, setUnreadChats, unreadChats }) { /* ... código ... */ }
+function AdminDashboard() { /* ... código ... */ }
+function MenuItem({ icon, label, onClick }) { /* ... código ... */ }
+function NotificationPreferences({ user, setUser }) { /* ... código ... */ }
+function StarRatingInput({ rating, setRating }) { /* ... código ... */ }
+function ReviewModal({ show, onClose, onSubmit, targetUserName }) { /* ... código ... */ }
+function PublicProfilePage({ userId, setView, user }) { /* ... código ... */ }
+function AccountPage({ user, setView, handleLogout }) { /* ... código ... */ }
+function AccountSettings({ user, setUser }) { /* ... código ... */ }
+function MyListings({ user, setView }) { /* ... código ... */ }
+function FavoritesPage({ user, setView }) { /* ... código ... */ }
+
+
+// ==================================================================
 // --- COMPONENTE PRINCIPAL ---
+// ==================================================================
 export default function App() {
     const [user, setUser] = useState(null);
     const [history, setHistory] = useState([{ page: 'home' }]);
@@ -131,14 +172,12 @@ export default function App() {
                             newMessages: true,
                             newJobs: true
                         },
-                        showLocation: true // Preferencia de ubicación por defecto
+                        showLocation: true
                     };
                     await setDoc(userDocRef, newUserProfile);
                     setUser({ uid: currentUser.uid, ...newUserProfile });
                 }
 
-                // --- LÓGICA PARA NOTIFICACIONES PUSH (COMENTADA TEMPORALMENTE) ---
-                /*
                 try {
                     const messaging = getMessaging(app);
                     const currentToken = await getToken(messaging, {
@@ -150,9 +189,8 @@ export default function App() {
                         await updateDoc(userDocRef, { fcmToken: currentToken });
                     }
                 } catch (err) {
-                    console.log("Ocurrió un error al obtener el token de notificación.", err);
+                    console.log("Ocurrió un error al obtener el token de notificación, puede ser normal si el usuario bloqueó los permisos.", err);
                 }
-                */
 
             } else {
                 setUser(null);
@@ -169,7 +207,57 @@ export default function App() {
     const handleLogout = () => { auth.signOut(); goHome(); };
     
     const navigateToMessages = async (chatInfo) => {
-        // ... (sin cambios)
+        const currentUserAuth = auth.currentUser;
+        if (!currentUserAuth) {
+            alert("Debes iniciar sesión para enviar mensajes.");
+            return;
+        }
+        
+        if (currentUserAuth.uid === chatInfo.recipientId) {
+            alert("No puedes enviarte mensajes a ti mismo.");
+            return;
+        }
+
+        const chatId = [currentUserAuth.uid, chatInfo.recipientId].sort().join('_');
+        const chatRef = doc(db, "chats", chatId);
+        
+        try {
+            let chatDoc = await getDoc(chatRef);
+
+            if (!chatDoc.exists()) {
+                const currentUserData = {
+                    displayName: currentUserAuth.displayName || "Usuario Anónimo",
+                    photoURL: currentUserAuth.photoURL || `https://i.pravatar.cc/150?u=${currentUserAuth.uid}`
+                };
+                const recipientData = {
+                    displayName: chatInfo.recipientName,
+                    photoURL: chatInfo.recipientPhotoURL
+                };
+
+                await setDoc(chatRef, {
+                    participants: [currentUserAuth.uid, chatInfo.recipientId],
+                    participantInfo: {
+                        [currentUserAuth.uid]: currentUserData,
+                        [chatInfo.recipientId]: recipientData
+                    },
+                    messages: [], 
+                    createdAt: serverTimestamp(), 
+                    updatedAt: serverTimestamp(),
+                    lastRead: {}
+                });
+                chatDoc = await getDoc(chatRef);
+            }
+            
+            const recipientId = chatDoc.data().participants.find(p => p !== currentUserAuth.uid);
+            const recipientInfo = chatDoc.data().participantInfo[recipientId];
+
+            setActiveChat({ id: chatDoc.id, ...chatDoc.data(), recipientInfo });
+            setView({ page: 'messages' });
+
+        } catch (error) {
+            console.error("Error al crear o navegar al chat:", error);
+            alert("Hubo un problema al iniciar la conversación. Inténtalo de nuevo.");
+        }
     };
     
     const renderContent = () => {
@@ -220,380 +308,5 @@ export default function App() {
             <BottomNavBar setView={setView} currentView={currentView} goHome={goHome} hasUnreadMessages={Object.values(unreadChats).filter(Boolean).length > 0} />
             <Footer />
         </div>
-    );
-}
-
-// --- OTROS COMPONENTES ---
-// (BackButton, Header, Footer, BottomNavBar, HomePage, ListingsPage, ListingsSkeleton, SkeletonCard, ListingCard, PublishPage, ConfirmationModal, ChatPage, AdminDashboard, MenuItem, NotificationPreferences se quedan igual)
-
-function ListingDetailPage({ listingId, currentUser, navigateToMessages, setView }) {
-    // ...
-    return (
-        // ...
-        <div className="flex items-center space-x-3 p-2 rounded-lg">
-            <img src={listing.userPhotoURL || `https://i.pravatar.cc/150?u=${listing.userId}`} alt={listing.userName} className="w-10 h-10 rounded-full" />
-            <div>
-                <p 
-                    className="font-semibold text-gray-800 cursor-pointer hover:underline"
-                    onClick={() => setView({ page: 'publicProfile', userId: listing.userId })}
-                >
-                    {listing.userName}
-                </p>
-                <p className="text-sm text-gray-500">{listing.location}</p>
-            </div>
-        </div>
-        // ...
-    );
-}
-
-function AccountSettings({ user, setUser }) {
-    const [displayName, setDisplayName] = useState(user?.displayName || '');
-    const [isSaving, setIsSaving] = useState(false);
-    const [photoFile, setPhotoFile] = useState(null);
-    const [photoPreview, setPhotoPreview] = useState(user?.photoURL || '');
-    const [businessInfo, setBusinessInfo] = useState({ businessName: '', website: '' });
-    const [showLocation, setShowLocation] = useState(user?.showLocation ?? true);
-    const fileInputRef = useRef(null);
-
-    useEffect(() => {
-        if (user) {
-            setDisplayName(user.displayName || '');
-            setPhotoPreview(user.photoURL || '');
-            setBusinessInfo({ businessName: user.businessName || '', website: user.website || '' });
-            setShowLocation(user.showLocation ?? true);
-        }
-    }, [user]);
-    
-    const handlePhotoChange = (e) => { if (e.target.files[0]) { setPhotoFile(e.target.files[0]); setPhotoPreview(URL.createObjectURL(e.target.files[0])); } };
-
-    const handleSave = async (e) => {
-        e.preventDefault();
-        setIsSaving(true);
-        try {
-            let newPhotoURL = user.photoURL;
-            if (photoFile) {
-                const photoRef = ref(storage, `profile-pictures/${user.uid}`);
-                await uploadBytes(photoRef, photoFile);
-                newPhotoURL = await getDownloadURL(photoRef);
-            }
-            const updatedData = { 
-                displayName, 
-                photoURL: newPhotoURL, 
-                businessName: businessInfo.businessName, 
-                website: businessInfo.website,
-                showLocation: showLocation 
-            };
-            await updateProfile(auth.currentUser, { displayName, photoURL: newPhotoURL });
-            const userDocRef = doc(db, "users", user.uid);
-            await updateDoc(userDocRef, updatedData);
-            setUser(prev => ({...prev, ...updatedData}));
-            alert("Perfil actualizado con éxito.");
-        } catch (error) {
-            console.error("Error al actualizar perfil:", error);
-            alert("Hubo un error al actualizar tu perfil.");
-        }
-        setIsSaving(false);
-    };
-
-    return (
-        <div className="bg-white p-8 rounded-lg shadow-lg max-w-2xl mx-auto">
-            <h2 className="text-2xl font-bold mb-6">Ajustes de Cuenta</h2>
-            <form onSubmit={handleSave} className="space-y-6">
-                <div className="flex flex-col items-center">
-                    <img src={photoPreview || `https://i.pravatar.cc/150?u=${user?.uid}`} alt="Perfil" className="w-24 h-24 rounded-full mb-4 cursor-pointer" onClick={() => fileInputRef.current.click()} />
-                    <input type="file" ref={fileInputRef} onChange={handlePhotoChange} className="hidden" accept="image/*" />
-                    <button type="button" onClick={() => fileInputRef.current.click()} className="text-sm text-blue-600 hover:underline">Cambiar foto</button>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Nombre de Usuario</label>
-                    <input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required />
-                </div>
-                <div className="border-t pt-6">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Ajustes de Privacidad</h3>
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                        <label htmlFor="show-location" className="font-medium text-gray-700">Mostrar mi ubicación en mi perfil público</label>
-                        <div 
-                            onClick={() => setShowLocation(prev => !prev)}
-                            className={`w-14 h-8 flex items-center bg-gray-300 rounded-full p-1 cursor-pointer transition-colors ${showLocation ? 'bg-blue-600' : ''}`}
-                        >
-                            <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${showLocation ? 'translate-x-6' : ''}`}></div>
-                        </div>
-                    </div>
-                </div>
-                <div className="border-t pt-6">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Información de tu Negocio (Opcional)</h3>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Nombre del Negocio</label>
-                        <input type="text" value={businessInfo.businessName} onChange={e => setBusinessInfo({ ...businessInfo, businessName: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mt-4">Sitio Web o Página Social</label>
-                        <input type="text" placeholder="https://..." value={businessInfo.website} onChange={e => setBusinessInfo({ ...businessInfo, website: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
-                    </div>
-                </div>
-                <div className="flex justify-end">
-                    <button type="submit" disabled={isSaving} className="bg-blue-600 text-white px-4 py-2 rounded-lg disabled:bg-blue-300 flex items-center">
-                        {isSaving && <SpinnerIcon />}
-                        {isSaving ? 'Guardando...' : 'Guardar Cambios'}
-                    </button>
-                </div>
-            </form>
-        </div>
-    );
-}
-
-
-function AccountPage({ user, setView, handleLogout }) {
-    if (!user) return <p>Cargando perfil...</p>;
-
-    const renderStars = (rating) => {
-        // ... (sin cambios)
-    };
-    
-    return (
-        <div className="bg-gray-900 text-white min-h-screen -m-4 md:-m-8">
-            <div className="p-4 max-w-3xl mx-auto">
-                {/* ... */}
-                <div className="flex items-center space-x-4 p-4">
-                    <img src={user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`} alt="Perfil" className="w-16 h-16 rounded-full" />
-                    <div className="flex-1">
-                        <h2 className="text-lg font-semibold">{user.displayName}</h2>
-                        <p className="text-sm text-gray-400">{user.showLocation === false ? 'Ubicación privada' : (user.location || 'Ubicación no especificada')}</p>
-                        {/* ... */}
-                    </div>
-                </div>
-                {/* ... */}
-            </div>
-        </div>
-    );
-}
-
-
-// --- COMPONENTES DE RESEÑAS ---
-function StarRatingInput({ rating, setRating }) {
-    const [hover, setHover] = useState(0);
-    return (
-        <div className="flex space-x-1 justify-center">
-            {[...Array(5)].map((star, index) => {
-                const ratingValue = index + 1;
-                return (
-                    <label key={index}>
-                        <input type="radio" name="rating" value={ratingValue} onClick={() => setRating(ratingValue)} className="hidden" />
-                        <svg
-                            className={`w-8 h-8 cursor-pointer ${ratingValue <= (hover || rating) ? 'text-yellow-400' : 'text-gray-300'}`}
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                            onMouseEnter={() => setHover(ratingValue)}
-                            onMouseLeave={() => setHover(0)}
-                        >
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
-                    </label>
-                );
-            })}
-        </div>
-    );
-}
-
-function ReviewModal({ show, onClose, onSubmit, targetUserName }) {
-    const [rating, setRating] = useState(0);
-    const [comment, setComment] = useState("");
-    const [isSubmitting, setIsSubmitting] = useState(false);
-
-    if (!show) return null;
-
-    const handleSubmit = async () => {
-        if (rating === 0 || comment.trim() === "") {
-            alert("Por favor, selecciona una calificación y escribe un comentario.");
-            return;
-        }
-        setIsSubmitting(true);
-        await onSubmit(rating, comment);
-        setIsSubmitting(false);
-        setRating(0);
-        setComment("");
-        onClose();
-    };
-
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
-                <h2 className="text-xl font-bold mb-4">Dejar una reseña para {targetUserName}</h2>
-                <div className="space-y-4">
-                    <StarRatingInput rating={rating} setRating={setRating} />
-                    <textarea
-                        value={comment}
-                        onChange={(e) => setComment(e.target.value)}
-                        placeholder="Escribe tu comentario aquí..."
-                        className="w-full border-gray-300 rounded-md p-2"
-                        rows="4"
-                    />
-                    <div className="flex justify-end gap-4">
-                        <button onClick={onClose} className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300">Cancelar</button>
-                        <button onClick={handleSubmit} disabled={isSubmitting} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300">
-                            {isSubmitting ? 'Enviando...' : 'Enviar Reseña'}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// --- COMPONENTE DE PERFIL PÚBLICO ---
-function PublicProfilePage({ userId, setView, user }) {
-    const [profile, setProfile] = useState(null);
-    const [userListings, setUserListings] = useState([]);
-    const [reviews, setReviews] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [showReviewModal, setShowReviewModal] = useState(false);
-
-    useEffect(() => {
-        const fetchProfileData = async () => {
-            setLoading(true);
-            try {
-                // 1. Obtener la información del perfil del vendedor
-                const profileDocRef = doc(db, 'users', userId);
-                const profileSnap = await getDoc(profileDocRef);
-
-                if (profileSnap.exists()) {
-                    setProfile(profileSnap.data());
-                }
-
-                // 2. Obtener todos los anuncios activos de ese vendedor
-                const listingsQuery = query(
-                    collection(db, 'listings'),
-                    where('userId', '==', userId),
-                    where('status', '==', 'active'),
-                    orderBy('createdAt', 'desc')
-                );
-                const listingsSnapshot = await getDocs(listingsQuery);
-                setUserListings(listingsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-
-                // 3. Obtener las reseñas del usuario
-                const reviewsQuery = query(
-                    collection(db, 'users', userId, 'reviews'),
-                    orderBy('createdAt', 'desc'),
-                    limit(10)
-                );
-                const reviewsSnapshot = await getDocs(reviewsQuery);
-                setReviews(reviewsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-
-            } catch (error) {
-                console.error("Error al cargar el perfil público:", error);
-            }
-            setLoading(false);
-        };
-
-        if (userId) {
-            fetchProfileData();
-        }
-    }, [userId]);
-
-    const handleReviewSubmit = async (rating, comment) => {
-        if (!user) {
-            alert("Debes iniciar sesión para dejar una reseña.");
-            return;
-        }
-        
-        const reviewData = {
-            rating: rating,
-            comment: comment,
-            createdAt: serverTimestamp(),
-            reviewerId: user.uid,
-            reviewerName: user.displayName,
-            reviewerPhotoURL: user.photoURL
-        };
-
-        try {
-            const reviewsCollectionRef = collection(db, 'users', userId, 'reviews');
-            await addDoc(reviewsCollectionRef, reviewData);
-            alert("¡Gracias por tu reseña!");
-        } catch (error) {
-            console.error("Error al enviar la reseña:", error);
-            alert("Hubo un problema al enviar tu reseña.");
-        }
-    };
-
-    const renderStars = (rating) => {
-        const stars = [];
-        for (let i = 1; i <= 5; i++) {
-            stars.push(<StarIcon key={i} filled={i <= rating} />);
-        }
-        return stars;
-    };
-
-    if (loading) {
-        return <div className="text-center p-10">Cargando perfil del vendedor...</div>;
-    }
-
-    if (!profile) {
-        return <div className="text-center p-10">Este usuario no fue encontrado.</div>;
-    }
-
-    return (
-        <>
-            <ReviewModal 
-                show={showReviewModal}
-                onClose={() => setShowReviewModal(false)}
-                onSubmit={handleReviewSubmit}
-                targetUserName={profile?.displayName}
-            />
-            <div className="container mx-auto">
-                <div className="bg-white p-6 rounded-lg shadow-md mb-8 flex items-center justify-between">
-                    <div className="flex items-center space-x-6">
-                        <img src={profile.photoURL || `https://i.pravatar.cc/150?u=${userId}`} alt={profile.displayName} className="w-24 h-24 rounded-full border-4 border-gray-200" />
-                        <div>
-                            <h1 className="text-3xl font-bold">{profile.displayName}</h1>
-                            <p className="text-gray-600">
-                                {profile.showLocation === false ? 'Ubicación privada' : (profile.location || 'Ubicación no especificada')}
-                            </p>
-                            <div className="flex items-center mt-1">
-                                <div className="flex">{renderStars(profile.rating || 0)}</div>
-                                <span className="text-xs text-gray-400 ml-2">({profile.ratingCount || 0} calificaciones)</span>
-                            </div>
-                        </div>
-                    </div>
-                    {user && user.uid !== userId && (
-                        <button onClick={() => setShowReviewModal(true)} className="bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-600">
-                            Dejar Reseña
-                        </button>
-                    )}
-                </div>
-
-                <div>
-                    <h2 className="text-2xl font-bold text-gray-800 mb-6">Anuncios de {profile.displayName}</h2>
-                    {userListings.length > 0 ? (
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                            {userListings.map(listing => (
-                                <ListingCard key={listing.id} listing={listing} setView={setView} user={user} />
-                            ))}
-                        </div>
-                    ) : (
-                        <p className="text-gray-500">Este vendedor no tiene anuncios activos en este momento.</p>
-                    )}
-                </div>
-
-                <div className="mt-12">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-6">Reseñas Recibidas</h2>
-                    {reviews.length > 0 ? (
-                        <div className="space-y-4">
-                            {reviews.map(review => (
-                                <div key={review.id} className="bg-gray-50 p-4 rounded-lg border">
-                                    <div className="flex items-center mb-2">
-                                        <img src={review.reviewerPhotoURL} alt={review.reviewerName} className="w-8 h-8 rounded-full mr-3" />
-                                        <span className="font-semibold">{review.reviewerName}</span>
-                                    </div>
-                                    <div className="flex mb-2">{renderStars(review.rating)}</div>
-                                    <p className="text-gray-700">{review.comment}</p>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <p className="text-gray-500">Este usuario aún no ha recibido reseñas.</p>
-                    )}
-                </div>
-            </div>
-        </>
     );
 }
