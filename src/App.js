@@ -6,6 +6,7 @@ import {
     onAuthStateChanged,
     signInWithPopup,
     GoogleAuthProvider,
+    FacebookAuthProvider, // Importado para la sesión con Facebook
     updateProfile
 } from 'firebase/auth';
 import {
@@ -69,6 +70,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 const googleProvider = new GoogleAuthProvider();
+const facebookProvider = new FacebookAuthProvider(); // Instancia del proveedor de Facebook
 const analytics = getAnalytics(app);
 
 try { enableIndexedDbPersistence(db, { cacheSizeBytes: CACHE_SIZE_UNLIMITED }); } catch (error) { console.error("Error al inicializar la persistencia de Firestore:", error); }
@@ -93,23 +95,36 @@ const ShieldIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 
 const QuestionMarkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.546-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const ChevronRightIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>;
 const StarIcon = ({ filled }) => <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${filled ? 'text-yellow-400' : 'text-gray-300'}`} viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>;
+const GoogleIcon = () => <svg className="w-6 h-6" viewBox="0 0 24 24"><path fill="currentColor" d="M21.35,11.1H12.18V13.83H18.69C18.36,17.64 15.19,19.27 12.19,19.27C8.36,19.27 5,16.25 5,12C5,7.9 8.2,4.73 12.2,4.73C15.29,4.73 17.1,6.7 17.1,6.7L19,4.72C19,4.72 16.56,2 12.1,2C6.42,2 2.03,6.8 2.03,12C2.03,17.05 6.16,22 12.25,22C17.6,22 21.5,18.33 21.5,12.91C21.5,11.76 21.35,11.1 21.35,11.1V11.1Z" /></svg>;
+const FacebookIcon = () => <svg className="w-6 h-6" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.04C6.5 2.04 2 6.53 2 12.06C2 17.06 5.66 21.21 10.44 21.96V14.96H7.9V12.06H10.44V9.85C10.44 7.32 11.93 5.96 14.22 5.96C15.31 5.96 16.45 6.15 16.45 6.15V8.62H15.19C13.95 8.62 13.56 9.39 13.56 10.18V12.06H16.34L15.89 14.96H13.56V21.96C18.34 21.21 22 17.06 22 12.06C22 6.53 17.5 2.04 12 2.04Z" /></svg>;
 
 
 // --- COMPONENTE PARA SOLICITAR INICIO DE SESIÓN ---
-function PleaseLogIn({ onLogin }) {
+function PleaseLogIn({ onLogin, onFacebookLogin }) {
     return (
         <div className="text-center p-8 max-w-md mx-auto bg-white rounded-lg shadow-md">
             <h2 className="text-2xl font-bold mb-4">Inicia Sesión para Continuar</h2>
-            <p className="text-gray-600 mb-6">Necesitas una cuenta para poder acceder a esta página.</p>
-            <button
-                onClick={onLogin}
-                className="bg-green-500 text-white font-semibold px-6 py-3 rounded-lg hover:bg-green-600 transition-colors"
-            >
-                Iniciar Sesión con Google
-            </button>
+            <p className="text-gray-600 mb-6">Elige tu método preferido para acceder a esta página.</p>
+            <div className="flex flex-col space-y-3">
+                <button
+                    onClick={onFacebookLogin}
+                    className="bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors w-full flex items-center justify-center"
+                >
+                    <FacebookIcon />
+                    <span className="ml-2">Iniciar Sesión con Facebook</span>
+                </button>
+                <button
+                    onClick={onLogin}
+                    className="bg-white text-gray-700 font-semibold px-6 py-3 rounded-lg hover:bg-gray-100 border border-gray-300 transition-colors w-full flex items-center justify-center"
+                >
+                    <GoogleIcon />
+                    <span className="ml-2">Iniciar Sesión con Google</span>
+                </button>
+            </div>
         </div>
     );
 }
+
 
 // --- COMPONENTE PRINCIPAL ---
 export default function App() {
@@ -180,6 +195,20 @@ export default function App() {
     const goBack = () => { if (history.length > 1) setHistory(prev => prev.slice(0, -1)); };
     const goHome = () => setHistory([{ page: 'home' }]);
     const handleLogin = async () => { try { await signInWithPopup(auth, googleProvider); } catch (error) { console.error("Error al iniciar sesión con Google:", error); } };
+    
+    const handleFacebookLogin = async () => {
+        try {
+            await signInWithPopup(auth, facebookProvider);
+        } catch (error) {
+            console.error("Error al iniciar sesión con Facebook:", error);
+            if (error.code === 'auth/account-exists-with-different-credential') {
+                alert('Ya tienes una cuenta con este correo electrónico usando otro método (por ejemplo, Google). Por favor, inicia sesión con el método original para vincular tus cuentas.');
+            } else {
+                alert("Hubo un problema al iniciar sesión con Facebook. Inténtalo de nuevo.");
+            }
+        }
+    };
+
     const handleLogout = () => { auth.signOut(); goHome(); };
 
     const navigateToMessages = async (chatInfo) => {
@@ -241,7 +270,7 @@ export default function App() {
         const protectedPages = ['account', 'accountSettings', 'myListings', 'favorites', 'messages', 'publish', 'adminDashboard', 'notificationPreferences'];
 
         if (protectedPages.includes(page) && !user) {
-            return <PleaseLogIn onLogin={handleLogin} />;
+            return <PleaseLogIn onLogin={handleLogin} onFacebookLogin={handleFacebookLogin} />;
         }
 
         switch (page) {
@@ -271,7 +300,15 @@ export default function App() {
 
     return (
         <div className="min-h-screen font-sans bg-gray-100">
-            <Header user={user} onLogin={handleLogin} onLogout={handleLogout} setView={setView} goHome={goHome} notificationCount={Object.values(unreadChats).filter(Boolean).length} />
+            <Header 
+                user={user} 
+                onLogin={handleLogin} 
+                onFacebookLogin={handleFacebookLogin} 
+                onLogout={handleLogout} 
+                setView={setView} 
+                goHome={goHome} 
+                notificationCount={Object.values(unreadChats).filter(Boolean).length} 
+            />
             <main className="container mx-auto pb-24 md:pb-8">
                 {history.length > 1 && currentView.page !== 'account' &&
                     <div className="px-4 md:px-0">
@@ -291,7 +328,38 @@ export default function App() {
 // --- COMPONENTES ---
 
 function BackButton({ onClick }) { return ( <button onClick={onClick} className="flex items-center text-gray-600 hover:text-gray-900 font-semibold mb-4"><ArrowLeftIcon /> Volver</button> ); }
-function Header({ user, onLogin, onLogout, setView, goHome, notificationCount }) { return ( <header className="bg-white/80 backdrop-blur-sm shadow-md sticky top-0 z-50 hidden md:block"><nav className="container mx-auto px-4 py-3 flex justify-between items-center"><div className="flex items-center cursor-pointer" onClick={goHome}><span className="text-2xl font-bold text-blue-600">Mercado<span className="text-sky-500">Nica</span></span></div><div className="flex items-center space-x-4">{user && user.uid === ADMIN_UID && <button onClick={() => setView({ page: 'adminDashboard' })} className="text-sm font-semibold text-blue-600 hover:underline">Admin</button>}{user && <div className="cursor-pointer" onClick={() => setView({ page: 'messages' })}><BellIcon hasNotification={notificationCount > 0} /></div>}{user ? (<div className="relative group"><img src={user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`} alt="Perfil" className="w-10 h-10 rounded-full cursor-pointer" /><div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-20 hidden group-hover:block"><span className="block px-4 py-2 text-sm text-gray-700 font-semibold truncate">{user.displayName}</span><a href="#" onClick={(e) => {e.preventDefault(); setView({ page: 'account' })}} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Mi Cuenta</a><a href="#" onClick={(e) => {e.preventDefault(); onLogout()}} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cerrar Sesión</a></div></div>) : ( <button onClick={onLogin} className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">Iniciar Sesión</button> )}</div></nav></header> ); }
+function Header({ user, onLogin, onLogout, setView, goHome, notificationCount, onFacebookLogin }) { 
+    return ( 
+        <header className="bg-white/80 backdrop-blur-sm shadow-md sticky top-0 z-50 hidden md:block">
+            <nav className="container mx-auto px-4 py-3 flex justify-between items-center">
+                <div className="flex items-center cursor-pointer" onClick={goHome}><span className="text-2xl font-bold text-blue-600">Mercado<span className="text-sky-500">Nica</span></span></div>
+                <div className="flex items-center space-x-4">
+                    {user && user.uid === ADMIN_UID && <button onClick={() => setView({ page: 'adminDashboard' })} className="text-sm font-semibold text-blue-600 hover:underline">Admin</button>}
+                    {user && <div className="cursor-pointer" onClick={() => setView({ page: 'messages' })}><BellIcon hasNotification={notificationCount > 0} /></div>}
+                    {user ? (
+                        <div className="relative group">
+                            <img src={user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`} alt="Perfil" className="w-10 h-10 rounded-full cursor-pointer" />
+                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-20 hidden group-hover:block">
+                                <span className="block px-4 py-2 text-sm text-gray-700 font-semibold truncate">{user.displayName}</span>
+                                <a href="#" onClick={(e) => {e.preventDefault(); setView({ page: 'account' })}} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Mi Cuenta</a>
+                                <a href="#" onClick={(e) => {e.preventDefault(); onLogout()}} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cerrar Sesión</a>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex items-center space-x-2">
+                             <button onClick={onFacebookLogin} className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition-colors" title="Iniciar con Facebook">
+                                <FacebookIcon />
+                            </button>
+                             <button onClick={onLogin} className="bg-white text-gray-700 p-2 rounded-full hover:bg-gray-100 border border-gray-300 transition-colors" title="Iniciar con Google">
+                                <GoogleIcon />
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </nav>
+        </header> 
+    ); 
+}
 function Footer() { return ( <footer className="bg-white/80 backdrop-blur-sm mt-12 py-6 border-t hidden md:block"><div className="container mx-auto text-center text-gray-600"><p>&copy; {new Date().getFullYear()} MercadoNica. Todos los derechos reservados.</p></div></footer> ); }
 function BottomNavBar({ setView, currentView, goHome, hasUnreadMessages }) { const handlePublishClick = () => { setView({ page: 'publish', type: 'producto' }) }; const navItems = [ { name: 'Inicio', icon: HomeIcon, page: 'home', action: goHome }, { name: 'Mensajes', icon: MessagesIcon, page: 'messages', action: () => setView({ page: 'messages' }), notification: hasUnreadMessages }, { name: 'Publicar', icon: PlusCircleIcon, page: 'publish', action: handlePublishClick, isCentral: true }, { name: 'Anuncios', icon: ListingsIcon, page: 'myListings', action: () => setView({ page: 'myListings' }) }, { name: 'Cuenta', icon: AccountIcon, page: 'account', action: () => setView({ page: 'account' }) }, ]; return ( <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-t shadow-lg z-50"><div className="flex justify-around items-center h-16">{navItems.map(item => { const isActive = item.page === 'account' ? ['account', 'accountSettings', 'myListings', 'favorites', 'notificationPreferences'].includes(currentView.page) : currentView.page === item.page; const Icon = item.icon; if (item.isCentral) { return ( <button key={item.name} onClick={item.action} className="bg-blue-600 rounded-full w-14 h-14 flex items-center justify-center -mt-6 shadow-lg"><Icon /></button> ); } return ( <button key={item.name} onClick={item.action} className="flex flex-col items-center justify-center text-xs w-16"><Icon isActive={isActive} hasNotification={item.notification} /><span className={`mt-1 truncate ${isActive ? 'text-blue-600' : 'text-gray-500'}`}>{item.name}</span></button> ); })}</div></div> ); }
 function HomePage({ setView }) { const [recentListings, setRecentListings] = useState([]); const [loading, setLoading] = useState(true); useEffect(() => { const q = query( collection(db, "listings"), where("type", "==", "producto"), where("status", "==", "active"), orderBy("createdAt", "desc"), limit(8) ); const unsubscribe = onSnapshot(q, (snapshot) => { const listingsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); setRecentListings(listingsData); setLoading(false); }); return () => unsubscribe(); }, []); return ( <div className="container mx-auto"><div className="bg-white p-6 rounded-lg shadow-lg mb-8 text-center"><h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">Bienvenido a MercadoNica</h1><p className="text-gray-600 text-lg">Tu plataforma para comprar, vender y encontrar empleo en Nicaragua.</p></div><div onClick={() => setView({ page: 'listings', type: 'trabajo' })} className="bg-blue-600 text-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow cursor-pointer flex items-center justify-between mb-12"><div><h2 className="text-2xl font-bold">¿Buscas Empleo?</h2><p className="opacity-90">Explora las últimas vacantes o publica una oferta.</p></div><BriefcaseIcon className="h-12 w-12 text-white opacity-80" /></div><div className="mb-12"><h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Artículos Recientes</h2>{loading ? <ListingsSkeleton /> : ( <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">{recentListings.map(listing => <ListingCard key={listing.id} listing={listing} setView={setView} user={null} />)}</div> )}<div className="text-center mt-8"><button onClick={() => setView({ page: 'listings', type: 'producto' })} className="bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">Ver todos los artículos</button></div></div></div> ); }
