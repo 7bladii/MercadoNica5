@@ -74,7 +74,6 @@ const analytics = getAnalytics(app);
 try { enableIndexedDbPersistence(db, { cacheSizeBytes: CACHE_SIZE_UNLIMITED }); } catch (error) { console.error("Error al inicializar la persistencia de Firestore:", error); }
 
 // --- ICONOS ---
-// (Tu código de íconos SVG se queda igual, no es necesario mostrarlo aquí por brevedad)
 const BellIcon = ({ hasNotification, className }) => ( <div className="relative"><svg xmlns="http://www.w3.org/2000/svg" className={className || "h-7 w-7"} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>{hasNotification && <span className="absolute top-0 right-0 block h-3 w-3 rounded-full bg-red-500 ring-2 ring-white"></span>}</div>);
 const BriefcaseIcon = ({className}) => (<svg xmlns="http://www.w3.org/2000/svg" className={className || "h-12 w-12 text-blue-500"} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>);
 const ArrowLeftIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" /></svg>;
@@ -368,6 +367,12 @@ function ListingDetailPage({ listingId, currentUser, navigateToMessages, setView
     const publisherLabel = isJob ? 'Reclutador' : 'Vendedor';
     const slides = listing.photos?.map(photo => ({ src: photo.full })) || [];
 
+    // --- LÓGICA PARA COMPARTIR ---
+    const pageUrl = window.location.href;
+    const shareText = `¡Mira este anuncio en MercadoNica: ${listing.title}!`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + pageUrl)}`;
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}`;
+
     return (
         <>
             <div className="bg-white p-4 sm:p-8 rounded-lg shadow-lg max-w-4xl mx-auto">
@@ -378,11 +383,12 @@ function ListingDetailPage({ listingId, currentUser, navigateToMessages, setView
                         {listing.photos && listing.photos.length > 1 && (
                             <div className="flex space-x-2 overflow-x-auto">
                                 {listing.photos.map((photo, index) => (
-                                    <img key={index} src={photo.thumb} onClick={() => setMainImage(photo.full)} className={`h-20 w-20 object-cover rounded-md cursor-pointer ${mainImage === photo.full ? 'border-2 border-blue-500' : ''}`} />
+                                    <img key={index} src={photo.thumb} onClick={() => setMainImage(photo.full)} className={`h-20 w-20 object-cover rounded-md cursor-pointer ${mainImage === photo.full ? 'border-2 border-blue-500' : ''}`} alt={`Thumbnail ${index+1}`} />
                                 ))}
                             </div>
                         )}
                     </div>
+                    
                     <div>
                         <span className="text-sm font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{listing.category}</span>
                         <h1 className="text-3xl font-bold my-2">{listing.title}</h1>
@@ -397,6 +403,7 @@ function ListingDetailPage({ listingId, currentUser, navigateToMessages, setView
                         ) : null}
 
                         <p className="text-3xl font-bold text-blue-600 mb-4">{isJob ? (listing.salary || 'Salario a convenir') : (listing.price ? `C$ ${new Intl.NumberFormat('es-NI').format(listing.price)}` : 'Precio a Consultar')}</p>
+                        
                         {(listing.make || listing.model || listing.year) && (
                             <div className="mb-4 p-4 border rounded-md bg-gray-50">
                                 <h3 className="font-semibold text-lg mb-2">Detalles del Vehículo</h3>
@@ -409,6 +416,7 @@ function ListingDetailPage({ listingId, currentUser, navigateToMessages, setView
                             </div>
                         )}
                         <p className="text-gray-600 mb-4 whitespace-pre-wrap">{listing.description || "No se agregó una descripción."}</p>
+                        
                         <div className="border-t pt-4 space-y-4">
                             <h3 className="font-semibold text-lg">Información del {publisherLabel}</h3>
                             <div className="flex items-center space-x-3 p-2 rounded-lg">
@@ -420,14 +428,8 @@ function ListingDetailPage({ listingId, currentUser, navigateToMessages, setView
                                     <p className="text-sm text-gray-500">{listing.location}</p>
                                 </div>
                             </div>
-                            {seller && seller.businessName && (
-                                <div className="border-t pt-4">
-                                    <h3 className="font-semibold text-lg mb-2">Información del Negocio</h3>
-                                    <p className="font-semibold text-gray-800">{seller.businessName}</p>
-                                    {seller.website && <a href={seller.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Visitar Sitio Web</a>}
-                                </div>
-                            )}
                         </div>
+
                         {currentUser && currentUser.uid !== listing.userId && (
                             <div className="mt-6 space-y-4">
                                 <button onClick={() => navigateToMessages({recipientId: listing.userId, recipientName: listing.userName, recipientPhotoURL: listing.userPhotoURL})} className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-bold transition">Enviar Mensaje</button>
@@ -436,6 +438,18 @@ function ListingDetailPage({ listingId, currentUser, navigateToMessages, setView
                                 )}
                             </div>
                         )}
+
+                        <div className="mt-6 pt-4 border-t text-center">
+                            <h4 className="font-semibold text-gray-700 mb-3">Compartir este anuncio</h4>
+                            <div className="flex justify-center items-center space-x-4">
+                                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center bg-green-500 text-white font-bold py-2 px-5 rounded-lg hover:bg-green-600 transition-colors">
+                                    WhatsApp
+                                </a>
+                                <a href={facebookUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center bg-blue-800 text-white font-bold py-2 px-5 rounded-lg hover:bg-blue-900 transition-colors">
+                                    Facebook
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
