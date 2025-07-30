@@ -157,60 +157,66 @@ export default function App() {
     const handleLogin = async () => { try { await signInWithPopup(auth, googleProvider); } catch (error) { console.error("Error al iniciar sesión con Google:", error); } };
     const handleLogout = () => { auth.signOut(); goHome(); };
     
-    const navigateToMessages = async (chatInfo) => {
-        const currentUserAuth = auth.currentUser;
-        if (!currentUserAuth) {
-            alert("Debes iniciar sesión para enviar mensajes.");
-            return;
+    // ✅ ESTA ES LA VERSIÓN NUEVA Y CORREGIDA
+const navigateToMessages = async (chatInfo) => {
+    const currentUserAuth = auth.currentUser;
+    if (!currentUserAuth) {
+        alert("Debes iniciar sesión para enviar mensajes.");
+        return;
+    }
+    
+    if (currentUserAuth.uid === chatInfo.recipientId) {
+        alert("No puedes enviarte mensajes a ti mismo.");
+        return;
+    }
+
+    // Genera el ID del chat de forma segura y consistente
+    const chatId = [currentUserAuth.uid, chatInfo.recipientId].sort().join('_');
+    const chatRef = doc(db, "chats", chatId);
+    
+    try {
+        let chatDoc = await getDoc(chatRef);
+
+        // ¡AQUÍ ESTÁ LA CORRECCIÓN!
+        // Si el documento de chat no existe, lo creamos.
+        if (!chatDoc.exists()) {
+            console.log("El chat no existe, creando uno nuevo...");
+            const currentUserData = {
+                displayName: currentUserAuth.displayName || "Usuario Anónimo",
+                photoURL: currentUserAuth.photoURL || `https://i.pravatar.cc/150?u=${currentUserAuth.uid}`
+            };
+            const recipientData = {
+                displayName: chatInfo.recipientName,
+                photoURL: chatInfo.recipientPhotoURL
+            };
+
+            await setDoc(chatRef, {
+                participants: [currentUserAuth.uid, chatInfo.recipientId],
+                participantInfo: {
+                    [currentUserAuth.uid]: currentUserData,
+                    [chatInfo.recipientId]: recipientData
+                },
+                messages: [], 
+                createdAt: serverTimestamp(), 
+                updatedAt: serverTimestamp(),
+                lastRead: {}
+            });
+            // Después de crearlo, lo volvemos a obtener para tener los datos más recientes
+            chatDoc = await getDoc(chatRef);
         }
         
-        if (currentUserAuth.uid === chatInfo.recipientId) {
-            alert("No puedes enviarte mensajes a ti mismo.");
-            return;
-        }
+        // Ahora que sabemos que el documento existe, podemos continuar de forma segura
+        const recipientId = chatDoc.data().participants.find(p => p !== currentUserAuth.uid);
+        const recipientInfo = chatDoc.data().participantInfo[recipientId];
 
-        const chatId = [currentUserAuth.uid, chatInfo.recipientId].sort().join('_');
-        const chatRef = doc(db, "chats", chatId);
-        
-        try {
-            const chatDoc = await getDoc(chatRef);
+        setActiveChat({ id: chatDoc.id, ...chatDoc.data(), recipientInfo });
+        setView({ page: 'messages' });
 
-            if (!chatDoc.exists()) {
-                const currentUserData = {
-                    displayName: currentUserAuth.displayName || "Usuario Anónimo",
-                    photoURL: currentUserAuth.photoURL || `https://i.pravatar.cc/150?u=${currentUserAuth.uid}`
-                };
-
-                const recipientData = {
-                    displayName: chatInfo.recipientName,
-                    photoURL: chatInfo.recipientPhotoURL
-                };
-
-                await setDoc(chatRef, {
-                    participants: [currentUserAuth.uid, chatInfo.recipientId].sort(),
-                    participantInfo: {
-                        [currentUserAuth.uid]: currentUserData,
-                        [chatInfo.recipientId]: recipientData
-                    },
-                    messages: [], 
-                    createdAt: serverTimestamp(), 
-                    updatedAt: serverTimestamp(),
-                    lastRead: {}
-                });
-            }
-            
-            const finalChatDoc = await getDoc(chatRef);
-            const recipientId = finalChatDoc.data().participants.find(p => p !== currentUserAuth.uid);
-            const recipientInfo = finalChatDoc.data().participantInfo[recipientId];
-
-            setActiveChat({ id: finalChatDoc.id, ...finalChatDoc.data(), recipientInfo });
-            setView({ page: 'messages' });
-
-        } catch (error) {
-            console.error("Error al crear o navegar al chat:", error);
-            alert("Hubo un problema al iniciar la conversación. Inténtalo de nuevo.");
-        }
-    };
+    } catch (error) {
+        console.error("Error al crear o navegar al chat:", error);
+        alert("Hubo un problema al iniciar la conversación. Inténtalo de nuevo.");
+    }
+};
     
     const renderContent = () => {
         const { page } = currentView;
