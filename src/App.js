@@ -19,7 +19,7 @@ import {
     doc,
     setDoc,
     getDoc,
-    updateDoc,
+    updateDoc, // <- Importado para guardar el token
     serverTimestamp,
     enableIndexedDbPersistence,
     CACHE_SIZE_UNLIMITED,
@@ -34,6 +34,7 @@ import {
     getDownloadURL,
     deleteObject
 } from 'firebase/storage';
+import { getMessaging, getToken } from "firebase/messaging"; // <- Importado para notificaciones
 import imageCompression from 'browser-image-compression';
 
 import Lightbox from "yet-another-react-lightbox";
@@ -72,6 +73,7 @@ const analytics = getAnalytics(app);
 try { enableIndexedDbPersistence(db, { cacheSizeBytes: CACHE_SIZE_UNLIMITED }); } catch (error) { console.error("Error al inicializar la persistencia de Firestore:", error); }
 
 // --- ICONOS ---
+// (Tu código de íconos SVG se queda igual, no es necesario mostrarlo aquí por brevedad)
 const BellIcon = ({ hasNotification, className }) => ( <div className="relative"><svg xmlns="http://www.w3.org/2000/svg" className={className || "h-7 w-7"} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>{hasNotification && <span className="absolute top-0 right-0 block h-3 w-3 rounded-full bg-red-500 ring-2 ring-white"></span>}</div>);
 const BriefcaseIcon = ({className}) => (<svg xmlns="http://www.w3.org/2000/svg" className={className || "h-12 w-12 text-blue-500"} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>);
 const ArrowLeftIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" /></svg>;
@@ -91,6 +93,7 @@ const ShieldIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 
 const QuestionMarkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.546-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const ChevronRightIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>;
 const StarIcon = ({ filled }) => <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${filled ? 'text-yellow-400' : 'text-gray-300'}`} viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>;
+
 
 // --- COMPONENTE PARA SOLICITAR INICIO DE SESIÓN ---
 function PleaseLogIn({ onLogin }) {
@@ -122,6 +125,7 @@ export default function App() {
             if (currentUser) {
                 const userDocRef = doc(db, "users", currentUser.uid);
                 const userDocSnap = await getDoc(userDocRef);
+                
                 if (userDocSnap.exists()) {
                     setUser({ uid: currentUser.uid, ...userDocSnap.data() });
                 } else {
@@ -143,6 +147,27 @@ export default function App() {
                     await setDoc(userDocRef, newUserProfile);
                     setUser({ uid: currentUser.uid, ...newUserProfile });
                 }
+
+                // --- LÓGICA PARA NOTIFICACIONES PUSH INTEGRADA ---
+                try {
+                    const messaging = getMessaging(app);
+                    const currentToken = await getToken(messaging, {
+                        vapidKey: "BEmZeqVU-Ew145_Qg7BTHXm-Tj1e2lLgs2nRFLPICC_R8ul_PfXjVrIIfn9VHnUf4ycOYblQQMQLKEA55Kn4aX0",
+                    });
+
+                    if (currentToken) {
+                        console.log("FCM Token:", currentToken);
+                        // Guarda el token en el perfil del usuario en Firestore
+                        const userDocRef = doc(db, "users", currentUser.uid);
+                        await updateDoc(userDocRef, { fcmToken: currentToken });
+                    } else {
+                        console.log("No se pudo obtener el token. El usuario necesita dar permiso.");
+                    }
+                } catch (err) {
+                    console.log("Ocurrió un error al obtener el token.", err);
+                }
+                // --- FIN DE LA LÓGICA DE NOTIFICACIONES ---
+
             } else {
                 setUser(null);
             }
@@ -157,66 +182,59 @@ export default function App() {
     const handleLogin = async () => { try { await signInWithPopup(auth, googleProvider); } catch (error) { console.error("Error al iniciar sesión con Google:", error); } };
     const handleLogout = () => { auth.signOut(); goHome(); };
     
-    // ✅ ESTA ES LA VERSIÓN NUEVA Y CORREGIDA
-const navigateToMessages = async (chatInfo) => {
-    const currentUserAuth = auth.currentUser;
-    if (!currentUserAuth) {
-        alert("Debes iniciar sesión para enviar mensajes.");
-        return;
-    }
-    
-    if (currentUserAuth.uid === chatInfo.recipientId) {
-        alert("No puedes enviarte mensajes a ti mismo.");
-        return;
-    }
-
-    // Genera el ID del chat de forma segura y consistente
-    const chatId = [currentUserAuth.uid, chatInfo.recipientId].sort().join('_');
-    const chatRef = doc(db, "chats", chatId);
-    
-    try {
-        let chatDoc = await getDoc(chatRef);
-
-        // ¡AQUÍ ESTÁ LA CORRECCIÓN!
-        // Si el documento de chat no existe, lo creamos.
-        if (!chatDoc.exists()) {
-            console.log("El chat no existe, creando uno nuevo...");
-            const currentUserData = {
-                displayName: currentUserAuth.displayName || "Usuario Anónimo",
-                photoURL: currentUserAuth.photoURL || `https://i.pravatar.cc/150?u=${currentUserAuth.uid}`
-            };
-            const recipientData = {
-                displayName: chatInfo.recipientName,
-                photoURL: chatInfo.recipientPhotoURL
-            };
-
-            await setDoc(chatRef, {
-                participants: [currentUserAuth.uid, chatInfo.recipientId],
-                participantInfo: {
-                    [currentUserAuth.uid]: currentUserData,
-                    [chatInfo.recipientId]: recipientData
-                },
-                messages: [], 
-                createdAt: serverTimestamp(), 
-                updatedAt: serverTimestamp(),
-                lastRead: {}
-            });
-            // Después de crearlo, lo volvemos a obtener para tener los datos más recientes
-            chatDoc = await getDoc(chatRef);
+    const navigateToMessages = async (chatInfo) => {
+        const currentUserAuth = auth.currentUser;
+        if (!currentUserAuth) {
+            alert("Debes iniciar sesión para enviar mensajes.");
+            return;
         }
         
-        // Ahora que sabemos que el documento existe, podemos continuar de forma segura
-        const recipientId = chatDoc.data().participants.find(p => p !== currentUserAuth.uid);
-        const recipientInfo = chatDoc.data().participantInfo[recipientId];
+        if (currentUserAuth.uid === chatInfo.recipientId) {
+            alert("No puedes enviarte mensajes a ti mismo.");
+            return;
+        }
 
-        setActiveChat({ id: chatDoc.id, ...chatDoc.data(), recipientInfo });
-        setView({ page: 'messages' });
+        const chatId = [currentUserAuth.uid, chatInfo.recipientId].sort().join('_');
+        const chatRef = doc(db, "chats", chatId);
+        
+        try {
+            let chatDoc = await getDoc(chatRef);
 
-    } catch (error) {
-        console.error("Error al crear o navegar al chat:", error);
-        alert("Hubo un problema al iniciar la conversación. Inténtalo de nuevo.");
-    }
-};
+            if (!chatDoc.exists()) {
+                const currentUserData = {
+                    displayName: currentUserAuth.displayName || "Usuario Anónimo",
+                    photoURL: currentUserAuth.photoURL || `https://i.pravatar.cc/150?u=${currentUserAuth.uid}`
+                };
+                const recipientData = {
+                    displayName: chatInfo.recipientName,
+                    photoURL: chatInfo.recipientPhotoURL
+                };
+
+                await setDoc(chatRef, {
+                    participants: [currentUserAuth.uid, chatInfo.recipientId],
+                    participantInfo: {
+                        [currentUserAuth.uid]: currentUserData,
+                        [chatInfo.recipientId]: recipientData
+                    },
+                    messages: [], 
+                    createdAt: serverTimestamp(), 
+                    updatedAt: serverTimestamp(),
+                    lastRead: {}
+                });
+                chatDoc = await getDoc(chatRef);
+            }
+            
+            const recipientId = chatDoc.data().participants.find(p => p !== currentUserAuth.uid);
+            const recipientInfo = chatDoc.data().participantInfo[recipientId];
+
+            setActiveChat({ id: chatDoc.id, ...chatDoc.data(), recipientInfo });
+            setView({ page: 'messages' });
+
+        } catch (error) {
+            console.error("Error al crear o navegar al chat:", error);
+            alert("Hubo un problema al iniciar la conversación. Inténtalo de nuevo.");
+        }
+    };
     
     const renderContent = () => {
         const { page } = currentView;
@@ -269,6 +287,8 @@ const navigateToMessages = async (chatInfo) => {
 }
 
 // --- RESTO DE COMPONENTES ---
+// (Aquí va el resto de tus componentes: BackButton, Header, Footer, BottomNavBar, HomePage, etc.)
+// No es necesario modificar el resto de los componentes, por lo que se omiten por brevedad.
 function BackButton({ onClick }) { return ( <button onClick={onClick} className="flex items-center text-gray-600 hover:text-gray-900 font-semibold mb-4"><ArrowLeftIcon /> Volver</button> ); }
 function Header({ user, onLogin, onLogout, setView, goHome, notificationCount }) { return ( <header className="bg-white/80 backdrop-blur-sm shadow-md sticky top-0 z-50 hidden md:block"><nav className="container mx-auto px-4 py-3 flex justify-between items-center"><div className="flex items-center cursor-pointer" onClick={goHome}><span className="text-2xl font-bold text-blue-600">Mercado<span className="text-sky-500">Nica</span></span></div><div className="flex items-center space-x-4">{user && user.uid === ADMIN_UID && <button onClick={() => setView({ page: 'adminDashboard' })} className="text-sm font-semibold text-blue-600 hover:underline">Admin</button>}{user && <div className="cursor-pointer" onClick={() => setView({ page: 'messages' })}><BellIcon hasNotification={notificationCount > 0} /></div>}{user ? (<div className="relative group"><img src={user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`} alt="Perfil" className="w-10 h-10 rounded-full cursor-pointer" /><div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-20 hidden group-hover:block"><span className="block px-4 py-2 text-sm text-gray-700 font-semibold truncate">{user.displayName}</span><a href="#" onClick={(e) => {e.preventDefault(); setView({ page: 'account' })}} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Mi Cuenta</a><a href="#" onClick={(e) => {e.preventDefault(); onLogout()}} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cerrar Sesión</a></div></div>) : ( <button onClick={onLogin} className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">Iniciar Sesión</button> )}</div></nav></header> ); }
 function Footer() { return ( <footer className="bg-white/80 backdrop-blur-sm mt-12 py-6 border-t hidden md:block"><div className="container mx-auto text-center text-gray-600"><p>&copy; {new Date().getFullYear()} MercadoNica. Todos los derechos reservados.</p></div></footer> ); }
