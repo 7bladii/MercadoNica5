@@ -54,13 +54,13 @@ const jobCategories = [ "Administración y Oficina", "Atención al Cliente", "Ca
 
 // --- CONFIGURACIÓN DE FIREBASE ---
 const firebaseConfig = {
-    apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
-    authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
-    projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
-    storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
-    appId: process.env.REACT_APP_FIREBASE_APP_ID,
-    measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
+    apiKey: "AIzaSyChYTYsSLFfWsk2UVm6BsldnaGw42AwDC4",
+  authDomain: "mecardonica.firebaseapp.com",
+  projectId: "mecardonica",
+  storageBucket: "mecardonica.firebasestorage.app",
+  messagingSenderId: "980886283273",
+  appId: "1:980886283273:web:17d0586151cc5c96d944d8",
+  measurementId: "G-RRQL5YD0V9"
 };
 
 
@@ -348,11 +348,11 @@ function Header({ user, onLogin, onLogout, setView, goHome, notificationCount, o
                     ) : (
                         <div className="flex items-center space-x-2">
                              <button onClick={onFacebookLogin} className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition-colors" title="Iniciar con Facebook">
-                                <FacebookIcon />
-                            </button>
+                                 <FacebookIcon />
+                             </button>
                              <button onClick={onLogin} className="bg-white text-gray-700 p-2 rounded-full hover:bg-gray-100 border border-gray-300 transition-colors" title="Iniciar con Google">
-                                <GoogleIcon />
-                            </button>
+                                 <GoogleIcon />
+                             </button>
                         </div>
                     )}
                 </div>
@@ -587,7 +587,7 @@ function AccountSettings({ user, setUser }) {
                 const newLogoUrl = await getDownloadURL(logoRef);
                 companyProfileData.logoUrl = newLogoUrl;
             } else {
-                 companyProfileData.logoUrl = user.companyProfile?.logoUrl || '';
+                companyProfileData.logoUrl = user.companyProfile?.logoUrl || '';
             }
 
             const updatedData = {
@@ -660,6 +660,7 @@ function AccountSettings({ user, setUser }) {
 function MyListings({ user, setView }) { const [myListings, setMyListings] = useState([]); const [loading, setLoading] = useState(true); const [showDeleteModal, setShowDeleteModal] = useState(null); const [showSoldModal, setShowSoldModal] = useState(null); useEffect(() => { if (!user) return; const q = query(collection(db, "listings"), where("userId", "==", user.uid), orderBy("createdAt", "desc")); const unsubscribe = onSnapshot(q, (snapshot) => { setMyListings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); setLoading(false); }); return () => unsubscribe(); }, [user]); const handleDelete = async (listingToDelete) => { if (!listingToDelete) return; try { if (listingToDelete.photos && listingToDelete.photos.length > 0) { const deletePromises = listingToDelete.photos.map(photo => { try { const fullRef = ref(storage, photo.full); const thumbRef = ref(storage, photo.thumb); return Promise.all([deleteObject(fullRef), deleteObject(thumbRef)]); } catch (e) { console.warn("No se pudo borrar la foto:", e.message); return Promise.resolve(); } }); await Promise.all(deletePromises); } await deleteDoc(doc(db, "listings", listingToDelete.id)); alert("Anuncio eliminado."); } catch (error) { console.error("Error eliminando:", error); alert("Error al eliminar."); } finally { setShowDeleteModal(null); } }; const handleMarkAsSold = async (listingToMark) => { if (!listingToMark) return; try { await updateDoc(doc(db, "listings", listingToMark.id), { status: 'sold' }); alert("Anuncio marcado como vendido."); } catch (error) { console.error("Error marcando como vendido:", error); alert("Error al actualizar."); } finally { setShowSoldModal(null); } }; return ( <> <div className="bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto"><h2 className="text-2xl font-bold mb-6">Mis Anuncios</h2>{loading ? <p>Cargando...</p> : !myListings.length ? <p>No has publicado nada.</p> : <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">{myListings.map(listing => ( <div key={listing.id} className={`border rounded-lg p-2 flex flex-col justify-between ${listing.status !== 'active' ? 'bg-gray-100 opacity-60' : ''}`}><div><img src={listing.photos?.[0]?.thumb || `https://placehold.co/600x400/e2e8f0/64748b?text=${listing.type}`} className="w-full h-32 object-cover rounded-md" /><h3 className="font-semibold truncate mt-2">{listing.title}</h3>{listing.status === 'sold' && <p className="text-sm font-bold text-green-600">VENDIDO</p>}</div><div className="flex gap-2 mt-2"><button onClick={() => setView({ page: 'publish', type: listing.type, listingId: listing.id })} className="w-full bg-blue-500 text-white text-sm font-semibold py-1 rounded-md hover:bg-blue-600">Editar</button>{listing.status === 'active' && listing.type === 'producto' && <button onClick={() => setShowSoldModal(listing)} className="w-full bg-green-500 text-white text-sm font-semibold py-1 rounded-md hover:bg-green-600">Vendido</button>}<button onClick={() => setShowDeleteModal(listing)} className="w-full bg-red-500 text-white text-sm font-semibold py-1 rounded-md hover:bg-red-600">Eliminar</button></div></div> ))}</div>}</div> {showDeleteModal && ( <ConfirmationModal message="¿Seguro que quieres eliminar este anuncio?" onConfirm={() => handleDelete(showDeleteModal)} onCancel={() => setShowDeleteModal(null)} /> )} {showSoldModal && ( <ConfirmationModal message="¿Marcar como vendido? No será visible en búsquedas." onConfirm={() => handleMarkAsSold(showSoldModal)} onCancel={() => setShowSoldModal(null)} /> )} </> ); }
 function FavoritesPage({ user, setView }) { const [favorites, setFavorites] = useState([]); const [loading, setLoading] = useState(true); useEffect(() => { if (!user) return; const q = query(collection(db, "users", user.uid, "favorites"), orderBy("addedAt", "desc")); const unsubscribe = onSnapshot(q, (snapshot) => { setFavorites(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); setLoading(false); }); return () => unsubscribe(); }, [user]); return ( <div className="container mx-auto"><h1 className="text-3xl font-bold mb-8">Mis Favoritos</h1>{loading ? <ListingsSkeleton /> : ( <> <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">{favorites.map(listing => <ListingCard key={listing.id} listing={listing} setView={setView} user={user} />)}</div> {!loading && favorites.length === 0 && <p className="text-center text-gray-500 mt-8">No has guardado favoritos.</p>} </> )}</div> ); }
 function ConfirmationModal({ message, onConfirm, onCancel }) { return ( <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"><div className="bg-white rounded-lg p-6 max-w-sm mx-4"><p className="text-lg mb-4">{message}</p><div className="flex justify-end gap-4"><button onClick={onCancel} className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300">Cancelar</button><button onClick={onConfirm} className="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600">Confirmar</button></div></div></div> ); }
+
 function ChatPage({ activeChat, setActiveChat, currentUser, setUnreadChats, unreadChats }) {
     const [conversations, setConversations] = useState([]);
     const [messages, setMessages] = useState([]);
@@ -768,15 +769,25 @@ function ChatPage({ activeChat, setActiveChat, currentUser, setUnreadChats, unre
                         </div>
                         <div className="flex-1 p-4 overflow-y-auto bg-gray-50" style={{backgroundImage: "url('https://i.pinimg.com/originals/85/ec/df/85ecdf1c361109f7955d93b450b549d3.jpg')", backgroundSize: '30%', opacity: 0.9}}>
                             <div className="bg-white bg-opacity-80 p-2 rounded-lg">
-                            {messages.map((msg, index) => (
-                                <div key={index} className={`flex ${msg.sender === currentUser.uid ? 'justify-end' : 'justify-start'} mb-4`}>
-                                    <div className={`max-w-xs md:max-w-md p-3 rounded-lg ${msg.sender === currentUser.uid ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}`}>
-                                        <p className="whitespace-pre-wrap break-words">{msg.text}</p>
-                                        <span className="text-xs opacity-75 mt-1 block text-right">{msg.createdAt?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                    </div>
-                                </div>
-                            ))}
-                            <div ref={messagesEndRef} />
+                                {messages.map((msg, index) => {
+                                    // --- DEBUG: Añade este console.log para ver los IDs ---
+                                    console.log(`Comparando msg.sender: ${msg.sender} con currentUser.uid: ${currentUser?.uid}`);
+
+                                    // Hacemos la comparación más segura con 'optional chaining' (?.)
+                                    const isMyMessage = currentUser && msg.sender === currentUser.uid;
+
+                                    return (
+                                        <div key={index} className={`flex ${isMyMessage ? 'justify-end' : 'justify-start'} mb-4`}>
+                                            <div className={`max-w-xs md:max-w-md p-3 rounded-lg ${isMyMessage ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}`}>
+                                                <p className="whitespace-pre-wrap break-words">{msg.text}</p>
+                                                <span className="text-xs opacity-75 mt-1 block text-right">
+                                                    {msg.createdAt?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                <div ref={messagesEndRef} />
                             </div>
                         </div>
                         <div className="p-4 border-t bg-white">
@@ -795,6 +806,7 @@ function ChatPage({ activeChat, setActiveChat, currentUser, setUnreadChats, unre
         </div>
     );
 }
+
 function AdminDashboard() { const [stats, setStats] = useState({ users: 0, listings: 0 }); const [loading, setLoading] = useState(true); useEffect(() => { const fetchStats = async () => { try { const usersColl = collection(db, "users"); const listingsColl = collection(db, "listings"); const userSnapshot = await getCountFromServer(usersColl); const listingSnapshot = await getCountFromServer(listingsColl); setStats({ users: userSnapshot.data().count, listings: listingSnapshot.data().count, }); } catch (error) { console.error("Error fetching stats:", error); } finally { setLoading(false); } }; fetchStats(); }, []); return ( <div className="container mx-auto"><h1 className="text-3xl font-bold mb-8">Panel de Administrador</h1>{loading ? ( <p>Cargando estadísticas...</p> ) : ( <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="bg-white p-6 rounded-lg shadow-md text-center"><h2 className="text-xl font-semibold text-gray-600">Usuarios Totales</h2><p className="text-4xl font-bold mt-2">{stats.users}</p></div><div className="bg-white p-6 rounded-lg shadow-md text-center"><h2 className="text-xl font-semibold text-gray-600">Anuncios Totales</h2><p className="text-4xl font-bold mt-2">{stats.listings}</p></div></div> )}</div> ); }
 function AccountPage({ user, setView, handleLogout }) {
     if (!user) return <p>Cargando perfil...</p>;
@@ -1076,7 +1088,7 @@ function CompanyProfilePage({ userId, setView, user }) {
                     <p className="text-gray-600 mt-2">{companyProfile.description}</p>
                     {companyProfile.website && (
                          <a href={companyProfile.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline mt-2 inline-block">
-                            Visitar sitio web
+                             Visitar sitio web
                          </a>
                     )}
                 </div>
