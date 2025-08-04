@@ -1,17 +1,12 @@
 {
-  "functions": [
-    {
-      "source": "functions",
-      "codebase": "default",
-      "ignore": [
-        "node_modules",
-        ".git",
-        "firebase-debug.log",
-        "firebase-debug.*.log",
-        "*.local"
-      ]
-    }
-  ],
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs20"
+  },
   "hosting": {
     "public": "build",
     "ignore": [
@@ -24,6 +19,24 @@
         "source": "**",
         "destination": "/index.html"
       }
+    ],
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "Cross-Origin-Opener-Policy",
+            "value": "same-origin-allow-popups"
+          },
+          {
+            "key": "Cross-Origin-Embedder-Policy",
+            "value": "require-corp"
+          }
+        ]
+      }
     ]
+  },
+  "storage": {
+    "rules": "storage.rules"
   }
 }

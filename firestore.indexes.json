@@ -1,0 +1,91 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "chats",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "participants",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "updatedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "listings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "type",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isPinned",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "listings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "listings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "type",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "listings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "type",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

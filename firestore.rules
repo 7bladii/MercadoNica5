@@ -1,0 +1,79 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    //============================================
+    // Funciones de Ayuda
+    //============================================
+    function isUpdatingAllowedFields(allowedFields) {
+      return request.resource.data.diff(resource.data).affectedKeys().isSubsetOf(allowedFields);
+    }
+    function doesNotChangeFields(disallowedFields) {
+      return request.resource.data.diff(resource.data).affectedKeys().intersection(disallowedFields).size() == 0;
+    }
+
+    //============================================
+    // Reglas para Perfiles de Usuario (users)
+    //============================================
+    match /users/{userId} {
+      allow read: if true;
+      allow create, delete: if request.auth != null && request.auth.uid == userId;
+
+      // MEJORA: Se elimina la regla que permitía a otros usuarios modificar 'followersCount'.
+      // Esto previene que un usuario malintencionado pueda inflar el contador de seguidores de otra persona.
+      // Esta lógica debería manejarse preferiblemente con Cloud Functions que reaccionen a cambios
+      // en la subcolección 'followers' para garantizar la integridad de los datos.
+      allow update: if request.auth != null &&
+                  request.auth.uid == userId &&
+                  doesNotChangeFields(['isPremium', 'isAdmin', 'followersCount', 'followingCount']);
+
+      match /favorites/{listingId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      match /followers/{followerId} {
+        // La escritura (seguir/dejar de seguir) la inicia el seguidor en el perfil del seguido.
+        allow read, write: if request.auth != null && request.auth.uid == followerId;
+      }
+      match /following/{followingId} {
+        // El usuario solo puede modificar su propia lista de 'seguidos'.
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      match /reviews/{reviewId} {
+        allow read: if true;
+        // Un usuario autenticado puede dejar una reseña a otro usuario, pero no a sí mismo.
+        allow create: if request.auth != null && request.auth.uid != userId;
+      }
+    }
+
+    //============================================
+    // Reglas para Anuncios (listings)
+    //============================================
+    match /listings/{listingId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
+
+      // CORRECCIÓN: Se separa la lógica de actualización.
+      // 1. El propietario del anuncio puede actualizarlo por completo.
+      // 2. CUALQUIER persona (autenticada o no) puede incrementar el contador de vistas. Esto soluciona tu error.
+      // 3. SOLO un usuario autenticado puede actualizar el contador de favoritos (seguramente la app lo hace cuando un usuario marca/desmarca como favorito).
+      allow update: if
+        (request.auth != null && request.auth.uid == resource.data.userId) ||
+        (isUpdatingAllowedFields(['viewCount'])) ||
+        (request.auth != null && isUpdatingAllowedFields(['favoriteCount']));
+    }
+
+    //============================================
+    // Reglas para Chats (chats)
+    //============================================
+    match /chats/{chatId} {
+      // SIN CAMBIOS: Esta regla es correcta. Para crear un chat, debes estar autenticado
+      // y ser uno de los participantes. El error en tu app se debe a que un usuario no logueado
+      // intenta esta acción. La solución está en tu app: deshabilita el botón de "Enviar Mensaje"
+      // o pide iniciar sesión si el usuario no está autenticado.
+      allow create: if request.auth != null && request.auth.uid in request.resource.data.participants;
+      allow read, update, delete: if request.auth != null && request.auth.uid in resource.data.participants;
+    }
+  }
+}

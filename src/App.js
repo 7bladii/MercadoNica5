@@ -1,134 +1,41 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { initializeApp } from 'firebase/app';
-import { getAnalytics, logEvent } from "firebase/analytics";
-import {
-    getAuth,
-    onAuthStateChanged,
-    signInWithPopup,
-    GoogleAuthProvider,
-    FacebookAuthProvider,
-    updateProfile
-} from 'firebase/auth';
-import {
-    getFirestore,
-    collection,
-    addDoc,
-    onSnapshot,
-    query,
-    orderBy,
-    where,
-    doc,
-    setDoc,
-    getDoc,
-    getDocs,
-    updateDoc,
-    serverTimestamp,
-    enableIndexedDbPersistence,
-    CACHE_SIZE_UNLIMITED,
-    limit,
-    deleteDoc,
-    getCountFromServer,
-    increment 
-} from 'firebase/firestore';
-import {
-    getStorage,
-    ref,
-    uploadBytes,
-    getDownloadURL,
-    deleteObject
-} from 'firebase/storage';
-import { getMessaging, getToken } from "firebase/messaging";
-import imageCompression from 'browser-image-compression';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
+import { onAuthStateChanged, signInWithPopup } from 'firebase/auth';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { getToken } from "firebase/messaging";
 
-import Lightbox from "yet-another-react-lightbox";
-import "yet-another-react-lightbox/styles.css";
+// --- RUTAS DE IMPORTACIÓN CORREGIDAS ---
+import { auth, db, googleProvider, facebookProvider, messaging } from './firebase/config';
+import PleaseLogIn from './components/common/PleaseLogIn';
+import Header from './components/layout/Header';
+import Footer from './components/layout/Footer';
+import BottomNavBar from './components/layout/BottomNavBar';
+import BackButton from './components/common/BackButton';
 
-// --- ID DE ADMINISTRADOR ---
-const ADMIN_UID = "TU_USER_ID_DE_FIREBASE"; // Reemplaza si es necesario
+// --- Carga Perezosa (Lazy Loading) de todas las páginas ---
+const HomePage = lazy(() => import('./pages/HomePage'));
+const ListingsPage = lazy(() => import('./pages/ListingsPage'));
+const ListingDetailPage = lazy(() => import('./pages/ListingDetailPage'));
+const PublishPage = lazy(() => import('./pages/PublishPage'));
+const ChatPage = lazy(() => import('./pages/ChatPage'));
+const AccountPage = lazy(() => import('./pages/AccountPage'));
+const AccountSettings = lazy(() => import('./pages/AccountSettings'));
+const MyListings = lazy(() => import('./pages/MyListings'));
+const FavoritesPage = lazy(() => import('./pages/FavoritesPage'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const NotificationPreferences = lazy(() => import('./pages/NotificationPreferences'));
+const PublicProfilePage = lazy(() => import('./pages/PublicProfilePage'));
+const CompanyProfilePage = lazy(() => import('./pages/CompanyProfilePage'));
+const PremiumUpgradePage = lazy(() => import('./pages/PremiumUpgradePage'));
+const PremiumDashboard = lazy(() => import('./pages/PremiumDashboard'));
 
-// --- LISTA COMPLETA DE CIUDADES DE NICARAGUA ---
-const nicaraguaCities = [ "Acoyapa", "Achuapa", "Altagracia", "Bluefields", "Boaco", "Bonanza", "Buenos Aires", "Camoapa", "Cárdenas", "Catarina", "Chichigalpa", "Chinandega", "Cinco Pinos", "Ciudad Antigua", "Ciudad Darío", "Ciudad Sandino", "Comalapa", "Condega", "Corinto", "Corn Island", "Cuapa", "Diriá", "Diriamba", "Diriomo", "Dolores", "El Almendro", "El Ayote", "El Castillo", "El Coral", "El Crucero", "El Cuá", "El Jicaral", "El Jícaro", "El Rama", "El Realejo", "El Rosario", "El Sauce", "El Tortuguero", "El Tuma - La Dalia", "El Viejo", "Esquipulas", "Estelí", "Granada", "Jalapa", "Jinotepe", "Jinotega", "Juigalpa", "Kukra Hill", "La Concepción", "La Concordia", "La Conquista", "La Cruz de Río Grande", "La Libertad", "La Paz Centro", "La Paz de Carazo", "La Trinidad", "Laguna de Perlas", "Larreynaga", "Las Sabanas", "León", "Macuelizo", "Managua", "Masatepe", "Masaya", "Matagalpa", "Matiguás", "Mateare", "Morrito", "Moyogalpa", "Mozonte", "Muelle de los Bueyes", "Mulukukú", "Murra", "Muy Muy", "Nagarote", "Nandaime", "Nandasmo", "Nindirí", "Niquinohomo", "Nueva Guinea", "Ocotal", "Palacagüina", "Paiwas", "Posoltega", "Potosí", "Prinzapolka", "Pueblo Nuevo", "Puerto Cabezas", "Puerto Morazán", "Quezalguaque", "Quilalí", "Rancho Grande", "Río Blanco", "Rivas", "Rosita", "San Carlos", "San Dionisio", "San Fernando", "San Francisco de Cuapa", "San Francisco del Norte", "San Isidro", "San Jorge", "San José de Bocay", "San José de Cusmapa", "San José de los Remates", "San Juan de Limay", "San Juan de Nicaragua", "San Juan de Oriente", "San Juan del Río Coco", "San Juan del Sur", "San Lorenzo", "San Lucas", "San Marcos", "San Miguelito", "San Nicolás", "San Pedro de Lóvago", "San Pedro del Norte", "San Rafael del Norte", "San Rafael del Sur", "San Ramón", "San Sebastián de Yalí", "Santa Lucía", "Santa María", "Santa María de Pantasma", "Santa Rosa del Peñón", "Santa Teresa", "Santo Domingo", "Santo Tomás", "Santo Tomás del Norte", "Sébaco", "Siuna", "Somotillo", "Somoto", "Telica", "Telpaneca", "Terrabona", "Teustepe", "Ticuantepe", "Tipitapa", "Tisma", "Tola", "Totogalpa", "Villa El Carmen", "Villa Sandino", "Villanueva", "Waspán", "Wiwilí de Jinotega", "Wiwilí de Nueva Segovia", "Yalagüina" ].sort();
+// Componente que se muestra mientras carga una página
+const PageLoader = () => (
+    <div className="flex items-center justify-center p-10">
+        <div className="text-xl font-semibold text-gray-700">Cargando...</div>
+    </div>
+);
 
-// --- CATEGORÍAS ---
-const productCategories = [ "Autos y Vehículos", "Motos", "Bienes Raíces", "Celulares y Tablets", "Computadoras y Laptops", "Electrónicos y Audio", "Videojuegos y Consolas", "Hogar y Muebles", "Electrodomésticos", "Ropa y Accesorios", "Salud y Belleza", "Deportes y Fitness", "Herramientas", "Construcción", "Industria y Oficina", "Mascotas", "Juguetes y Bebés", "Libros y Revistas", "Música y Hobbies", "Otro" ].sort();
-const jobCategories = [ "Administración y Oficina", "Atención al Cliente", "Call Center y Telemercadeo", "Compras y Comercio Exterior", "Construcción y Obra", "Diseño y Artes Gráficas", "Docencia", "Finanzas y Contabilidad", "Gerencia y Dirección", "Informática y Telecomunicaciones", "Logística y Almacén", "Mantenimiento y Reparaciones", "Marketing y Publicidad", "Medicina y Salud", "Producción y Operarios", "Recursos Humanos", "Servicios Generales y Aseo", "Turismo y Hostelería", "Ventas", "Otro" ].sort();
-
-// --- CONFIGURACIÓN DE FIREBASE ---
-const firebaseConfig = {
-    apiKey: "AIzaSyChYTYsSLFfWsk2UVm6BsldnaGw42AwDC4",
-    authDomain: "mecardonica.firebaseapp.com",
-    projectId: "mecardonica",
-    storageBucket: "mecardonica.firebasestorage.app",
-    messagingSenderId: "980886283273",
-    appId: "1:980886283273:web:17d0586151cc5c96d944d8",
-    measurementId: "G-RRQL5YD0V9"
-};
-
-
-// --- INICIALIZACIÓN DE FIREBASE Y ANALYTICS ---
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
-const googleProvider = new GoogleAuthProvider();
-const facebookProvider = new FacebookAuthProvider();
-const analytics = getAnalytics(app);
-
-try { enableIndexedDbPersistence(db, { cacheSizeBytes: CACHE_SIZE_UNLIMITED }); } catch (error) { console.error("Error al inicializar la persistencia de Firestore:", error); }
-
-// --- ICONOS ---
-const BellIcon = ({ hasNotification, className }) => ( <div className="relative"><svg xmlns="http://www.w3.org/2000/svg" className={className || "h-7 w-7"} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>{hasNotification && <span className="absolute top-0 right-0 block h-3 w-3 rounded-full bg-red-500 ring-2 ring-white"></span>}</div>);
-const BriefcaseIcon = ({className}) => (<svg xmlns="http://www.w3.org/2000/svg" className={className || "h-12 w-12 text-blue-500"} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>);
-const ArrowLeftIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" /></svg>;
-const CameraIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
-const SpinnerIcon = () => <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
-const HomeIcon = ({isActive}) => <svg className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>;
-const MessagesIcon = ({isActive, hasNotification}) => <div className="relative"><svg className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>{hasNotification && <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500"></span>}</div>;
-const PlusCircleIcon = () => <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" /></svg>;
-const ListingsIcon = ({isActive}) => <svg className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>;
-const AccountIcon = ({isActive}) => <svg className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
-const HeartIcon = ({ isFavorite, ...props }) => <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill={isFavorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5"><path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" /></svg>;
-const GearIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
-const DiamondIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.889 12.042l6.25-9.375a1.5 1.5 0 012.722 0l6.25 9.375a1.5 1.5 0 01-1.361 2.308H5.25a1.5 1.5 0 01-1.361-2.308z" /></svg>;
-const PublicProfileIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
-const DollarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v.01M12 6v-1.667a1.667 1.667 0 01.958-1.519l2.493-1.246a.5.5 0 01.73.424V6.25m-6.189-1.583A1.667 1.667 0 005.333 4.333V6.25m8.334 9.5a2.5 2.5 0 01-5 0m0 0a2.5 2.5 0 00-5 0m10 0V20a1 1 0 01-1 1H7a1 1 0 01-1-1v-2.5m10 0h.01" /></svg>;
-const ShieldIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 20.944A12.02 12.02 0 0012 22c4.612 0 8.58-2.624 10.382-6.382A11.955 11.955 0 0121 12c0-1.22-.182-2.401-.524-3.518l-3.86-1.544z" /></svg>;
-const QuestionMarkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.546-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
-const ChevronRightIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>;
-const StarIcon = ({ filled }) => <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${filled ? 'text-yellow-400' : 'text-gray-300'}`} viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>;
-const GoogleIcon = () => <svg className="w-6 h-6" viewBox="0 0 24 24"><path fill="currentColor" d="M21.35,11.1H12.18V13.83H18.69C18.36,17.64 15.19,19.27 12.19,19.27C8.36,19.27 5,16.25 5,12C5,7.9 8.2,4.73 12.2,4.73C15.29,4.73 17.1,6.7 17.1,6.7L19,4.72C19,4.72 16.56,2 12.1,2C6.42,2 2.03,6.8 2.03,12C2.03,17.05 6.16,22 12.25,22C17.6,22 21.5,18.33 21.5,12.91C21.5,11.76 21.35,11.1 21.35,11.1V11.1Z" /></svg>;
-const FacebookIcon = () => <svg className="w-6 h-6" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.04C6.5 2.04 2 6.53 2 12.06C2 17.06 5.66 21.21 10.44 21.96V14.96H7.9V12.06H10.44V9.85C10.44 7.32 11.93 5.96 14.22 5.96C15.31 5.96 16.45 6.15 16.45 6.15V8.62H15.19C13.95 8.62 13.56 9.39 13.56 10.18V12.06H16.34L15.89 14.96H13.56V21.96C18.34 21.21 22 17.06 22 12.06C22 6.53 17.5 2.04 12 2.04Z" /></svg>;
-const VerifiedIcon = ({ className }) => (<svg xmlns="http://www.w3.org/2000/svg" className={className || "h-5 w-5 text-blue-500"} viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>);
-
-
-// --- COMPONENTE PARA SOLICITAR INICIO DE SESIÓN ---
-function PleaseLogIn({ onLogin, onFacebookLogin }) {
-    return (
-        <div className="text-center p-8 max-w-md mx-auto bg-white rounded-lg shadow-md">
-            <h2 className="text-2xl font-bold mb-4">Inicia Sesión para Continuar</h2>
-            <p className="text-gray-600 mb-6">Elige tu método preferido para acceder a esta página.</p>
-            <div className="flex flex-col space-y-3">
-                <button
-                    onClick={onFacebookLogin}
-                    className="bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors w-full flex items-center justify-center"
-                >
-                    <FacebookIcon />
-                    <span className="ml-2">Iniciar Sesión con Facebook</span>
-                </button>
-                <button
-                    onClick={onLogin}
-                    className="bg-white text-gray-700 font-semibold px-6 py-3 rounded-lg hover:bg-gray-100 border border-gray-300 transition-colors w-full flex items-center justify-center"
-                >
-                    <GoogleIcon />
-                    <span className="ml-2">Iniciar Sesión con Google</span>
-                </button>
-            </div>
-        </div>
-    );
-}
-
-
-// --- COMPONENTE PRINCIPAL ---
+// --- Componente Principal de la Aplicación ---
 export default function App() {
     const [user, setUser] = useState(null);
     const [history, setHistory] = useState([{ page: 'home' }]);
@@ -137,6 +44,7 @@ export default function App() {
     const [unreadChats, setUnreadChats] = useState({});
     const currentView = history[history.length - 1];
 
+    // Efecto para manejar el estado de autenticación del usuario
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
@@ -146,42 +54,34 @@ export default function App() {
                 if (userDocSnap.exists()) {
                     setUser({ uid: currentUser.uid, ...userDocSnap.data() });
                 } else {
+                    // Crear perfil de usuario si es la primera vez que inicia sesión
                     const newUserProfile = {
                         displayName: currentUser.displayName || "Usuario Anónimo",
                         email: currentUser.email,
                         photoURL: currentUser.photoURL,
                         createdAt: serverTimestamp(),
-                        location: "Managua, NI",
-                        followers: 0,
-                        following: 0,
+                        location: "Ubicación no especificada",
+                        followersCount: 0,
+                        followingCount: 0,
                         rating: 0,
                         ratingCount: 0,
+                        boughtCount: 0,
+                        soldCount: 0,
                         isVerified: false,
-                        isPremium: false, 
-                        notifications: {
-                            newMessages: true,
-                            newJobs: true
-                        }
+                        isPremium: false,
+                        notifications: { newMessages: true, newJobs: true }
                     };
                     await setDoc(userDocRef, newUserProfile);
                     setUser({ uid: currentUser.uid, ...newUserProfile });
                 }
 
                 try {
-                    const messaging = getMessaging(app);
-                    const currentToken = await getToken(messaging, {
-                        vapidKey: "BEmZeqVU-Ew145_Qg7BTHXm-Tj1e2lLgs2nRFLPICC_R8ul_PfXjVrIIfn9VHnUf4ycOYblQQMQLKEA55Kn4aX0",
-                    });
-
+                    const currentToken = await getToken(messaging, { vapidKey: "BEmZeqVU-Ew145_Qg7BTHXm-Tj1e2lLgs2nRFLPICC_R8ul_PfXjVrIIfn9VHnUf4ycOYblQQMQLKEA55Kn4aX0" });
                     if (currentToken) {
-                        console.log("FCM Token:", currentToken);
-                        const userDocRef = doc(db, "users", currentUser.uid);
-                        await updateDoc(userDocRef, { fcmToken: currentToken });
-                    } else {
-                        console.log("No se pudo obtener el token. El usuario necesita dar permiso.");
+                        await updateDoc(doc(db, "users", currentUser.uid), { fcmToken: currentToken });
                     }
                 } catch (err) {
-                    console.log("Ocurrió un error al obtener el token.", err);
+                    console.log("Ocurrió un error al obtener el token de notificación.", err);
                 }
 
             } else {
@@ -195,21 +95,9 @@ export default function App() {
     const setView = (newView) => setHistory(prev => [...prev, newView]);
     const goBack = () => { if (history.length > 1) setHistory(prev => prev.slice(0, -1)); };
     const goHome = () => setHistory([{ page: 'home' }]);
-    const handleLogin = async () => { try { await signInWithPopup(auth, googleProvider); } catch (error) { console.error("Error al iniciar sesión con Google:", error); } };
-    
-    const handleFacebookLogin = async () => {
-        try {
-            await signInWithPopup(auth, facebookProvider);
-        } catch (error) {
-            console.error("Error al iniciar sesión con Facebook:", error);
-            if (error.code === 'auth/account-exists-with-different-credential') {
-                alert('Ya tienes una cuenta con este correo electrónico usando otro método (por ejemplo, Google). Por favor, inicia sesión con el método original para vincular tus cuentas.');
-            } else {
-                alert("Hubo un problema al iniciar sesión con Facebook. Inténtalo de nuevo.");
-            }
-        }
-    };
 
+    const handleLogin = async () => { try { await signInWithPopup(auth, googleProvider); } catch (error) { console.error("Error al iniciar sesión con Google:", error); } };
+    const handleFacebookLogin = async () => { try { await signInWithPopup(auth, facebookProvider); } catch (error) { console.error("Error al iniciar sesión con Facebook:", error); if (error.code === 'auth/account-exists-with-different-credential') { alert('Ya tienes una cuenta con este correo electrónico usando otro método.'); } } };
     const handleLogout = () => { auth.signOut(); goHome(); };
 
     const navigateToMessages = async (chatInfo) => {
@@ -218,51 +106,49 @@ export default function App() {
             alert("Debes iniciar sesión para enviar mensajes.");
             return;
         }
-
         if (currentUserAuth.uid === chatInfo.recipientId) {
             alert("No puedes enviarte mensajes a ti mismo.");
             return;
         }
-
-        const chatId = [currentUserAuth.uid, chatInfo.recipientId].sort().join('_');
+    
+        const chatId = chatInfo.listingId 
+            ? [currentUserAuth.uid, chatInfo.recipientId].sort().join('_') + `_${chatInfo.listingId}`
+            : [currentUserAuth.uid, chatInfo.recipientId].sort().join('_');
+            
         const chatRef = doc(db, "chats", chatId);
-
+    
         try {
             let chatDoc = await getDoc(chatRef);
-
+    
             if (!chatDoc.exists()) {
-                const currentUserData = {
-                    displayName: currentUserAuth.displayName || "Usuario Anónimo",
-                    photoURL: currentUserAuth.photoURL || `https://i.pravatar.cc/150?u=${currentUserAuth.uid}`
-                };
-                const recipientData = {
-                    displayName: chatInfo.recipientName,
-                    photoURL: chatInfo.recipientPhotoURL
-                };
-
-                await setDoc(chatRef, {
+                const newChatData = {
                     participants: [currentUserAuth.uid, chatInfo.recipientId],
                     participantInfo: {
-                        [currentUserAuth.uid]: currentUserData,
-                        [chatInfo.recipientId]: recipientData
+                        [currentUserAuth.uid]: { displayName: currentUserAuth.displayName || "Usuario Anónimo", photoURL: currentUserAuth.photoURL || `https://i.pravatar.cc/150?u=${currentUserAuth.uid}` },
+                        [chatInfo.recipientId]: { displayName: chatInfo.recipientName, photoURL: chatInfo.recipientPhotoURL }
                     },
+                    listingInfo: chatInfo.listingId ? {
+                        id: chatInfo.listingId,
+                        title: chatInfo.listingTitle,
+                        photoURL: chatInfo.listingPhotoURL
+                    } : null,
                     messages: [],
                     createdAt: serverTimestamp(),
                     updatedAt: serverTimestamp(),
                     lastRead: {}
-                });
+                };
+                await setDoc(chatRef, newChatData);
                 chatDoc = await getDoc(chatRef);
             }
-
+    
             const recipientId = chatDoc.data().participants.find(p => p !== currentUserAuth.uid);
             const recipientInfo = chatDoc.data().participantInfo[recipientId];
-
             setActiveChat({ id: chatDoc.id, ...chatDoc.data(), recipientInfo });
             setView({ page: 'messages' });
-
+    
         } catch (error) {
             console.error("Error al crear o navegar al chat:", error);
-            alert("Hubo un problema al iniciar la conversación. Inténtalo de nuevo.");
+            alert("Hubo un problema al iniciar la conversación.");
         }
     };
 
@@ -278,14 +164,14 @@ export default function App() {
             case 'listings': return <ListingsPage type={currentView.type} setView={setView} user={user} />;
             case 'listingDetail': return <ListingDetailPage listingId={currentView.listingId} currentUser={user} navigateToMessages={navigateToMessages} setView={setView} />;
             case 'publish': return <PublishPage type={currentView.type} setView={setView} user={user} listingId={currentView.listingId} />;
-            case 'messages': return <ChatPage activeChat={activeChat} setActiveChat={setActiveChat} currentUser={user} setUnreadChats={setUnreadChats} unreadChats={unreadChats} />;
+            case 'messages': return <ChatPage activeChat={activeChat} setActiveChat={setActiveChat} currentUser={user} setUnreadChats={setUnreadChats} />;
             case 'account': return <AccountPage user={user} setView={setView} handleLogout={handleLogout} />;
             case 'accountSettings': return <AccountSettings user={user} setUser={setUser} />;
             case 'myListings': return <MyListings user={user} setView={setView} />;
             case 'favorites': return <FavoritesPage user={user} setView={setView} />;
             case 'adminDashboard': return <AdminDashboard />;
             case 'notificationPreferences': return <NotificationPreferences user={user} setUser={setUser} />;
-            case 'publicProfile': return <PublicProfilePage userId={currentView.userId} setView={setView} user={user} />;
+            case 'publicProfile': return <PublicProfilePage userId={currentView.userId} setView={setView} user={user} navigateToMessages={navigateToMessages} />;
             case 'companyProfile': return <CompanyProfilePage userId={currentView.userId} setView={setView} user={user} />;
             case 'premiumUpgrade': return <PremiumUpgradePage user={user} setUser={setUser} />;
             case 'premiumDashboard': return <PremiumDashboard user={user} setView={setView} />;
@@ -303,1074 +189,21 @@ export default function App() {
 
     return (
         <div className="min-h-screen font-sans bg-gray-100">
-            <Header 
-                user={user} 
-                onLogin={handleLogin} 
-                onFacebookLogin={handleFacebookLogin} 
-                onLogout={handleLogout} 
-                setView={setView} 
-                goHome={goHome} 
-                notificationCount={Object.values(unreadChats).filter(Boolean).length} 
-            />
+            <Header user={user} onLogin={handleLogin} onFacebookLogin={handleFacebookLogin} onLogout={handleLogout} setView={setView} goHome={goHome} notificationCount={Object.values(unreadChats).filter(Boolean).length} />
             <main className="container mx-auto pb-24 md:pb-8">
-                {history.length > 1 && currentView.page !== 'account' &&
+                {history.length > 1 && currentView.page !== 'account' && (
                     <div className="px-4 md:px-0">
                         <BackButton onClick={goBack} />
                     </div>
-                }
+                )}
                 <div className={currentView.page !== 'account' ? 'p-4 md:p-0' : ''}>
-                    {renderContent()}
+                    <Suspense fallback={<PageLoader />}>
+                        {renderContent()}
+                    </Suspense>
                 </div>
             </main>
             <BottomNavBar setView={setView} currentView={currentView} goHome={goHome} hasUnreadMessages={Object.values(unreadChats).filter(Boolean).length > 0} />
             <Footer />
-        </div>
-    );
-}
-
-// --- COMPONENTES ---
-
-function BackButton({ onClick }) { return ( <button onClick={onClick} className="flex items-center text-gray-600 hover:text-gray-900 font-semibold mb-4"><ArrowLeftIcon /> Volver</button> ); }
-function Header({ user, onLogin, onLogout, setView, goHome, notificationCount, onFacebookLogin }) { 
-    return ( 
-        <header className="bg-white/80 backdrop-blur-sm shadow-md sticky top-0 z-50 hidden md:block">
-            <nav className="container mx-auto px-4 py-3 flex justify-between items-center">
-                <div className="flex items-center cursor-pointer" onClick={goHome}><span className="text-2xl font-bold text-blue-600">Mercado<span className="text-sky-500">Nica</span></span></div>
-                <div className="flex items-center space-x-4">
-                    {user && user.uid === ADMIN_UID && <button onClick={() => setView({ page: 'adminDashboard' })} className="text-sm font-semibold text-blue-600 hover:underline">Admin</button>}
-                    {user && <div className="cursor-pointer" onClick={() => setView({ page: 'messages' })}><BellIcon hasNotification={notificationCount > 0} /></div>}
-                    {user ? (
-                        <div className="relative group">
-                            <img src={user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`} alt="Perfil" className="w-10 h-10 rounded-full cursor-pointer" />
-                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-20 hidden group-hover:block">
-                                <span className="block px-4 py-2 text-sm text-gray-700 font-semibold truncate">{user.displayName}</span>
-                                <a href="#" onClick={(e) => {e.preventDefault(); setView({ page: 'account' })}} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Mi Cuenta</a>
-                                <a href="#" onClick={(e) => {e.preventDefault(); onLogout()}} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cerrar Sesión</a>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="flex items-center space-x-2">
-                             <button onClick={onFacebookLogin} className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition-colors" title="Iniciar con Facebook">
-                                 <FacebookIcon />
-                             </button>
-                             <button onClick={onLogin} className="bg-white text-gray-700 p-2 rounded-full hover:bg-gray-100 border border-gray-300 transition-colors" title="Iniciar con Google">
-                                 <GoogleIcon />
-                             </button>
-                        </div>
-                    )}
-                </div>
-            </nav>
-        </header> 
-    ); 
-}
-function Footer() { return ( <footer className="bg-white/80 backdrop-blur-sm mt-12 py-6 border-t hidden md:block"><div className="container mx-auto text-center text-gray-600"><p>&copy; {new Date().getFullYear()} MercadoNica. Todos los derechos reservados.</p></div></footer> ); }
-function BottomNavBar({ setView, currentView, goHome, hasUnreadMessages }) { const handlePublishClick = () => { setView({ page: 'publish', type: 'producto' }) }; const navItems = [ { name: 'Inicio', icon: HomeIcon, page: 'home', action: goHome }, { name: 'Mensajes', icon: MessagesIcon, page: 'messages', action: () => setView({ page: 'messages' }), notification: hasUnreadMessages }, { name: 'Publicar', icon: PlusCircleIcon, page: 'publish', action: handlePublishClick, isCentral: true }, { name: 'Anuncios', icon: ListingsIcon, page: 'myListings', action: () => setView({ page: 'myListings' }) }, { name: 'Cuenta', icon: AccountIcon, page: 'account', action: () => setView({ page: 'account' }) }, ]; return ( <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-t shadow-lg z-50"><div className="flex justify-around items-center h-16">{navItems.map(item => { const isActive = item.page === 'account' ? ['account', 'accountSettings', 'myListings', 'favorites', 'notificationPreferences'].includes(currentView.page) : currentView.page === item.page; const Icon = item.icon; if (item.isCentral) { return ( <button key={item.name} onClick={item.action} className="bg-blue-600 rounded-full w-14 h-14 flex items-center justify-center -mt-6 shadow-lg"><Icon /></button> ); } return ( <button key={item.name} onClick={item.action} className="flex flex-col items-center justify-center text-xs w-16"><Icon isActive={isActive} hasNotification={item.notification} /><span className={`mt-1 truncate ${isActive ? 'text-blue-600' : 'text-gray-500'}`}>{item.name}</span></button> ); })}</div></div> ); }
-function HomePage({ setView }) { const [recentListings, setRecentListings] = useState([]); const [loading, setLoading] = useState(true); useEffect(() => { const q = query( collection(db, "listings"), where("type", "==", "producto"), where("status", "==", "active"), orderBy("createdAt", "desc"), limit(8) ); const unsubscribe = onSnapshot(q, (snapshot) => { const listingsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); setRecentListings(listingsData); setLoading(false); }); return () => unsubscribe(); }, []); return ( <div className="container mx-auto"><div className="bg-white p-6 rounded-lg shadow-lg mb-8 text-center"><h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">Bienvenido a MercadoNica</h1><p className="text-gray-600 text-lg">Tu plataforma para comprar, vender y encontrar empleo en Nicaragua.</p></div><div onClick={() => setView({ page: 'listings', type: 'trabajo' })} className="bg-blue-600 text-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow cursor-pointer flex items-center justify-between mb-12"><div><h2 className="text-2xl font-bold">¿Buscas Empleo?</h2><p className="opacity-90">Explora las últimas vacantes o publica una oferta.</p></div><BriefcaseIcon className="h-12 w-12 text-white opacity-80" /></div><div className="mb-12"><h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Artículos Recientes</h2>{loading ? <ListingsSkeleton /> : ( <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">{recentListings.map(listing => <ListingCard key={listing.id} listing={listing} setView={setView} user={null} />)}</div> )}<div className="text-center mt-8"><button onClick={() => setView({ page: 'listings', type: 'producto' })} className="bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">Ver todos los artículos</button></div></div></div> ); }
-function ListingsPage({ type, setView, user }) { const [allListings, setAllListings] = useState([]); const [filteredListings, setFilteredListings] = useState([]); const [loading, setLoading] = useState(true); const [searchTerm, setSearchTerm] = useState(''); const [selectedCity, setSelectedCity] = useState(''); const [selectedCategory, setSelectedCategory] = useState(''); const pageTitle = type === 'producto' ? 'Artículos en Venta' : 'Ofertas de Empleo'; const publishButtonText = type === 'producto' ? 'Vender Artículo' : 'Publicar Empleo'; const categories = type === 'producto' ? productCategories : jobCategories; useEffect(() => { setLoading(true); const q = query( collection(db, "listings"), where("type", "==", type), where("status", "==", "active"), orderBy("createdAt", "desc") ); const unsubscribe = onSnapshot(q, (snapshot) => { const listingsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); const sortedListings = listingsData.sort((a, b) => (b.isHighlighted ? 1 : 0) - (a.isHighlighted ? 1 : 0)); setAllListings(sortedListings); setFilteredListings(sortedListings); setLoading(false); }, (error) => { console.error("Error fetching listings:", error); setLoading(false); }); return () => unsubscribe(); }, [type]); useEffect(() => { let result = allListings; if (searchTerm) { result = result.filter(listing => listing.title.toLowerCase().includes(searchTerm.toLowerCase())); } if (selectedCity) { result = result.filter(listing => listing.location === selectedCity); } if (selectedCategory) { result = result.filter(listing => listing.category === selectedCategory); } setFilteredListings(result); }, [searchTerm, selectedCity, selectedCategory, allListings]); return ( <div className="container mx-auto"><div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4"><h1 className="text-3xl font-bold">{pageTitle}</h1><div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto"><input type="text" placeholder="Buscar por título..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="border-gray-300 rounded-md shadow-sm w-full sm:w-auto" /><select value={selectedCity} onChange={e => setSelectedCity(e.target.value)} className="border-gray-300 rounded-md shadow-sm w-full sm:w-auto"><option value="">Todas las Ciudades</option>{nicaraguaCities.map(city => <option key={city} value={city}>{city}</option>)}</select><select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="border-gray-300 rounded-md shadow-sm w-full sm:w-auto"><option value="">Todas las Categorías</option>{categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}</select></div><button onClick={() => setView({ page: 'publish', type: type })} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 w-full md:w-auto">{publishButtonText}</button></div>{loading ? <ListingsSkeleton /> : ( <> <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">{filteredListings.map(listing => <ListingCard key={listing.id} listing={listing} setView={setView} user={user} />)}</div> {!loading && filteredListings.length === 0 && <p className="text-center text-gray-500 mt-8">No se encontraron anuncios que coincidan con tu búsqueda.</p>} </> )}</div> ); }
-function ListingsSkeleton() { return ( <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">{Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}</div> ); }
-function SkeletonCard() { return ( <div className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse"><div className="w-full h-48 bg-gray-300"></div><div className="p-4 space-y-3"><div className="h-4 bg-gray-300 rounded w-1/3"></div><div className="h-6 bg-gray-300 rounded w-full"></div><div className="h-4 bg-gray-300 rounded w-1/2"></div><div className="h-8 bg-gray-300 rounded w-1/3"></div></div></div> ); }
-function ListingCard({ listing, setView, user }) { const placeholderUrl = `https://placehold.co/400x400/e2e8f0/64748b?text=${listing.type === 'producto' ? 'Producto' : 'Empleo'}`; const [isFavorite, setIsFavorite] = useState(false); useEffect(() => { if (!user) return; const favRef = doc(db, "users", user.uid, "favorites", listing.id); const unsubscribe = onSnapshot(favRef, (doc) => { setIsFavorite(doc.exists()); }); return () => unsubscribe(); }, [user, listing.id]); const toggleFavorite = async (e) => { e.stopPropagation(); if (!user) { alert("Debes iniciar sesión para guardar favoritos."); return; } const favRef = doc(db, "users", user.uid, "favorites", listing.id); if (isFavorite) { await deleteDoc(favRef); } else { await setDoc(favRef, { ...listing, addedAt: serverTimestamp() }); } }; const isJob = listing.type === 'trabajo'; const imageUrl = listing.photos?.[0]?.thumb || placeholderUrl; return ( <div onClick={() => setView({ page: 'listingDetail', listingId: listing.id })} className={`bg-white rounded-lg shadow-md overflow-hidden flex flex-col group transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer ${listing.isHighlighted ? 'border-2 border-yellow-400' : ''}`}><div className="relative"><img src={imageUrl} alt={listing.title} className="w-full aspect-square object-cover" />{listing.isHighlighted && (<div className="absolute top-2 left-2 bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded-md flex items-center shadow-lg">⭐ DESTACADO</div>)}{user && ( <button onClick={toggleFavorite} className="absolute top-2 right-2 bg-white p-2 rounded-full shadow-md transition-opacity opacity-0 group-hover:opacity-100"><HeartIcon isFavorite={isFavorite} className={`w-6 h-6 ${isFavorite ? 'text-red-500' : 'text-gray-400'}`} /></button> )}{listing.photos && listing.photos.length > 1 && ( <div className="absolute bottom-2 left-2 bg-black bg-opacity-60 text-white text-xs font-bold px-2 py-1 rounded-md flex items-center"><CameraIcon /><span className="ml-1">{listing.photos.length}</span></div> )}</div><div className="p-4 flex-grow flex flex-col space-y-1"><span className="text-xs font-semibold text-gray-500 uppercase">{listing.category}</span><h3 className="font-semibold text-gray-800 h-12 line-clamp-2">{listing.title}</h3><p className="text-gray-600 text-sm flex-grow">{listing.location}</p><div className="pt-2">{isJob ? ( <p className="text-md font-bold text-blue-600">{listing.salary || 'Salario a convenir'}</p> ) : ( <p className="text-lg font-extrabold text-blue-700">{listing.price ? `C$ ${new Intl.NumberFormat('es-NI').format(listing.price)}` : 'Consultar'}</p> )}</div></div></div> ); }
-function PublishPage({ type, setView, user, listingId }) { const isJob = type === 'trabajo'; const [formData, setFormData] = useState({ title: '', description: '', category: '', price: '', companyName: '', salary: '', make: '', model: '', year: '', mileage: '', applicationContact: '' }); const [location, setLocation] = useState(''); const [newImageFiles, setNewImageFiles] = useState([]); const [existingPhotos, setExistingPhotos] = useState([]); const [isSubmitting, setIsSubmitting] = useState(false); const [errors, setErrors] = useState({}); const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 }); const [isHighlighted, setIsHighlighted] = useState(false); const categories = isJob ? jobCategories : productCategories; const isEditing = !!listingId; useEffect(() => { if (isEditing) { const fetchListing = async () => { const docRef = doc(db, "listings", listingId); const docSnap = await getDoc(docRef); if (docSnap.exists()) { const data = docSnap.data(); setFormData({ title: data.title, description: data.description, category: data.category || '', price: data.price || '', companyName: data.companyName || '', salary: data.salary || '', make: data.make || '', model: data.model || '', year: data.year || '', mileage: data.mileage || '', applicationContact: data.applicationContact || '' }); setLocation(data.location); setExistingPhotos(data.photos || []); setIsHighlighted(data.isHighlighted || false); } }; fetchListing(); } }, [listingId, isEditing]); const validateForm = () => { const newErrors = {}; if (!formData.title.trim()) newErrors.title = "El título es obligatorio."; else if (formData.title.trim().length < 5) newErrors.title = "El título debe tener al menos 5 caracteres."; if (!isJob && !formData.category) newErrors.category = "Debes seleccionar una categoría."; if (!location) newErrors.location = "Debes seleccionar una ubicación."; if (!formData.description.trim()) newErrors.description = "La descripción es obligatoria."; else if (formData.description.trim().length < 15) newErrors.description = "La descripción debe ser más detallada (mínimo 15 caracteres)."; if (!isJob && existingPhotos.length === 0 && newImageFiles.length === 0) newErrors.images = "Debes subir al menos una foto para el artículo."; setErrors(newErrors); return Object.keys(newErrors).length === 0; }; const handleImageChange = (e) => { if (e.target.files) { const filesArray = Array.from(e.target.files); const currentImagesCount = existingPhotos.length + newImageFiles.length; const maxImages = isJob ? 1 : 12; if (currentImagesCount + filesArray.length > maxImages) { setErrors(prev => ({ ...prev, images: `No puedes subir más de ${maxImages} ${isJob ? 'logo/foto' : 'fotos'}.` })); return; } const validFiles = []; for (const file of filesArray) { if (file.size > 5 * 1024 * 1024) { setErrors(prev => ({ ...prev, images: `La imagen "${file.name}" es muy grande (máx 5MB).` })); continue; } if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) { setErrors(prev => ({ ...prev, images: `El archivo "${file.name}" no es una imagen válida.` })); continue; } validFiles.push(file); } if (isJob) { setNewImageFiles(validFiles); } else { setNewImageFiles(prev => [...prev, ...validFiles]); } if (errors.images) setErrors(prev => ({ ...prev, images: null })); } }; const removeNewImage = (index) => { setNewImageFiles(prev => prev.filter((_, i) => i !== index)); }; const removeExistingImage = (index) => { setExistingPhotos(prev => prev.filter((_, i) => i !== index)); }; const handleSubmit = async (e) => { e.preventDefault(); if (!user) { setErrors({ form: "Debes iniciar sesión para publicar." }); return; } if (!validateForm()) return; setIsSubmitting(true); setErrors({}); try { const uploadAndGetURLs = async (file) => { const timestamp = Date.now(); const randomId = Math.random().toString(36).substring(2, 8); const baseName = `${user.uid}/${timestamp}_${randomId}_${file.name}`; const fullImg = await imageCompression(file, { maxSizeMB: 1.5, maxWidthOrHeight: 1920 }); const fullImgRef = ref(storage, `listings/${baseName}_full.jpg`); await uploadBytes(fullImgRef, fullImg); const fullUrl = await getDownloadURL(fullImgRef); const thumbImg = await imageCompression(file, { maxSizeMB: 0.1, maxWidthOrHeight: 400 }); const thumbImgRef = ref(storage, `listings/${baseName}_thumb.jpg`); await uploadBytes(thumbImgRef, thumbImg); const thumbUrl = await getDownloadURL(thumbImgRef); return { full: fullUrl, thumb: thumbUrl }; }; setUploadProgress({ current: 0, total: newImageFiles.length }); const newPhotoObjects = []; for (let i = 0; i < newImageFiles.length; i++) { const file = newImageFiles[i]; const urls = await uploadAndGetURLs(file); newPhotoObjects.push(urls); setUploadProgress({ current: i + 1, total: newImageFiles.length }); } const allPhotos = [...existingPhotos, ...newPhotoObjects]; const listingData = { title: formData.title, description: formData.description, category: formData.category, location, type, photos: allPhotos, userId: user.uid, userName: user.displayName, userPhotoURL: user.photoURL, isVerified: user.isVerified || false, isHighlighted: user.isPremium ? isHighlighted : false, status: 'active', updatedAt: serverTimestamp(), }; if (isJob) { listingData.companyName = formData.companyName; listingData.salary = formData.salary; listingData.applicationContact = formData.applicationContact; } else { listingData.price = Number(formData.price) || 0; listingData.make = formData.make; listingData.model = formData.model; listingData.year = formData.year; listingData.mileage = formData.mileage; } if (isEditing) { const docRef = doc(db, "listings", listingId); await updateDoc(docRef, listingData); } else { const newDocRef = await addDoc(collection(db, "listings"), { ...listingData, createdAt: serverTimestamp(), viewCount: 0, favoriteCount: 0, }); logEvent(analytics, 'publish_listing', { user_id: user.uid, listing_id: newDocRef.id, listing_type: type, category: listingData.category, location: listingData.location, }); } setView({ page: 'listings', type: type }); } catch (error) { console.error("Error al publicar:", error); setErrors({ form: "Hubo un error al publicar. Revisa tu conexión o inténtalo más tarde." }); } finally { setIsSubmitting(false); setUploadProgress({ current: 0, total: 0 }); } }; const showVehicleFields = formData.category === 'Autos y Vehículos' || formData.category === 'Motos'; const allPreviews = [ ...existingPhotos.map((photo, index) => ({ type: 'existing', url: photo.thumb, index })), ...newImageFiles.map((file, index) => ({ type: 'new', url: URL.createObjectURL(file), index })) ]; return ( <div className="container mx-auto max-w-2xl"><div className="bg-white p-8 rounded-lg shadow-lg"><h2 className="text-2xl font-bold mb-6 text-center">{isEditing ? 'Editar' : 'Publicar'} {isJob ? 'Empleo' : 'Artículo'}</h2><form onSubmit={handleSubmit} className="space-y-4">{errors.form && <p className="text-red-500 text-sm bg-red-100 p-2 rounded-md">{errors.form}</p>}<div><input type="text" placeholder={isJob ? "Título del Puesto" : "Título del anuncio"} value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.title ? 'border-red-500' : ''}`} />{errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}</div><div><select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.category && !isJob ? 'border-red-500' : ''}`}><option value="">{isJob ? "Selecciona una Categoría (Opcional)" : "Selecciona una Categoría"}</option>{categories.map(c => <option key={c} value={c}>{c}</option>)}</select>{errors.category && !isJob && <p className="text-red-500 text-xs mt-1">{errors.category}</p>}</div>{showVehicleFields && ( <div className="p-4 border rounded-md bg-gray-50 space-y-4"><h3 className="font-semibold text-gray-700">Detalles del Vehículo</h3><div><input type="text" placeholder="Marca (Ej: Toyota)" value={formData.make} onChange={e => setFormData({ ...formData, make: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" /></div><div><input type="text" placeholder="Modelo (Ej: Hilux)" value={formData.model} onChange={e => setFormData({ ...formData, model: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" /></div><div><input type="number" placeholder="Año (Ej: 2022)" value={formData.year} onChange={e => setFormData({ ...formData, year: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" /></div><div><input type="number" placeholder="Kilometraje (Opcional)" value={formData.mileage} onChange={e => setFormData({ ...formData, mileage: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" /></div></div> )}{isJob && (<> <input type="text" placeholder="Nombre de la Empresa (Opcional)" value={formData.companyName} onChange={e => setFormData({ ...formData, companyName: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" /> <input type="text" placeholder="Email o Link para Aplicar (Opcional)" value={formData.applicationContact} onChange={e => setFormData({ ...formData, applicationContact: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" /> </>)}<div><textarea placeholder={isJob ? "Descripción del puesto, requisitos..." : "Descripción detallada..."} value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.description ? 'border-red-500' : ''}`} rows="4" />{errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}</div>{isJob ? <input type="text" placeholder="Salario (Ej: C$15,000 o A convenir)" value={formData.salary} onChange={e => setFormData({ ...formData, salary: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" /> : <input type="number" placeholder="Precio (C$) (Opcional)" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />}<div><select value={location} onChange={e => setLocation(e.target.value)} className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.location ? 'border-red-500' : ''}`}><option value="">Selecciona una Ciudad</option>{nicaraguaCities.map(c => <option key={c} value={c}>{c}</option>)}</select>{errors.location && <p className="text-red-500 text-xs mt-1">{errors.location}</p>}</div><div><label className="block text-sm font-medium text-gray-700">{isJob ? 'Logo (1 max)' : 'Fotos (12 max)'}</label><div className="mt-2 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">{allPreviews.map((p) => ( <div key={`${p.type}-${p.index}`} className="relative"><img src={p.url} alt={`Preview ${p.index}`} className="h-24 w-24 object-cover rounded-md" /><button type="button" onClick={() => p.type === 'existing' ? removeExistingImage(p.index) : removeNewImage(p.index)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold">&times;</button></div> ))}{allPreviews.length < (isJob ? 1 : 12) && ( <label htmlFor="file-upload" className="flex items-center justify-center w-24 h-24 border-2 border-gray-300 border-dashed rounded-md cursor-pointer hover:border-blue-500"><div className="text-center text-gray-500">+<br />Añadir</div><input id="file-upload" type="file" className="sr-only" onChange={handleImageChange} accept="image/*" multiple={!isJob} /></label> )}{errors.images && <p className="text-red-500 text-xs mt-1">{errors.images}</p>}</div></div>{user?.isPremium && type === 'producto' && (<div className="flex items-center justify-between p-4 bg-yellow-50 rounded-lg border border-yellow-200"><label htmlFor="highlight-toggle" className="font-medium text-yellow-800">⭐ Destacar este anuncio</label><div onClick={() => setIsHighlighted(prev => !prev)} className={`w-14 h-8 flex items-center bg-gray-300 rounded-full p-1 cursor-pointer transition-colors ${isHighlighted ? 'bg-yellow-400' : ''}`}><div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${isHighlighted ? 'translate-x-6' : ''}`}></div></div></div>)}<div className="flex justify-end space-x-4 items-center">{isSubmitting && uploadProgress.total > 0 && <span className="text-sm text-gray-500">{`Subiendo ${uploadProgress.current} de ${uploadProgress.total}...`}</span>}<button type="button" onClick={() => setView({ page: 'listings', type: type })} className="bg-gray-200 px-4 py-2 rounded-lg">Cancelar</button><button type="submit" disabled={isSubmitting} className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center disabled:bg-blue-300 min-w-[100px]">{isSubmitting ? <SpinnerIcon /> : (isEditing ? 'Actualizar' : 'Publicar')}</button></div></form></div></div> ); }
-function ListingDetailPage({ listingId, currentUser, navigateToMessages, setView }) {
-    const [listing, setListing] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [mainImage, setMainImage] = useState('');
-    const [lightboxOpen, setLightboxOpen] = useState(false);
-    const [lightboxIndex, setLightboxIndex] = useState(0);
-    const [isFavorite, setIsFavorite] = useState(false);
-    const [seller, setSeller] = useState(null);
-
-    useEffect(() => {
-        const docRef = doc(db, "listings", listingId);
-
-        const incrementViewCount = async () => {
-             const docSnap = await getDoc(docRef);
-             if (docSnap.exists() && currentUser?.uid !== docSnap.data().userId) {
-                await updateDoc(docRef, { viewCount: increment(1) });
-             }
-        };
-        incrementViewCount();
-        
-        const unsubscribe = onSnapshot(docRef, (doc) => {
-            if (doc.exists()) {
-                const data = { id: doc.id, ...doc.data() };
-                setListing(data);
-                if (data.photos && data.photos.length > 0) {
-                    setMainImage(data.photos[0].full);
-                }
-            }
-            setLoading(false);
-        });
-        return () => unsubscribe();
-    }, [listingId, currentUser]);
-
-
-    useEffect(() => {
-        if (!listing) return;
-        const fetchSeller = async () => {
-            const userRef = doc(db, "users", listing.userId);
-            const userSnap = await getDoc(userRef);
-            if (userSnap.exists()) {
-                setSeller(userSnap.data());
-            }
-        };
-        fetchSeller();
-        if (currentUser) {
-            const favRef = doc(db, "users", currentUser.uid, "favorites", listing.id);
-            const unsub = onSnapshot(favRef, (doc) => {
-                setIsFavorite(doc.exists());
-            });
-            return () => unsub();
-        }
-    }, [currentUser, listing]);
-
-    const toggleFavorite = async (e) => {
-        e.stopPropagation();
-        if (!currentUser || !listing) return;
-        
-        const favRef = doc(db, "users", currentUser.uid, "favorites", listing.id);
-        const listingRef = doc(db, "listings", listing.id);
-
-        if (isFavorite) {
-            await deleteDoc(favRef);
-            await updateDoc(listingRef, { favoriteCount: increment(-1) });
-        } else {
-            await setDoc(favRef, { ...listing, addedAt: serverTimestamp() });
-            await updateDoc(listingRef, { favoriteCount: increment(1) });
-        }
-    };
-
-    const openLightboxOn = (index) => {
-        setLightboxIndex(index);
-        setLightboxOpen(true);
-    };
-
-    const handleReportListing = () => {
-        logEvent(analytics, 'report_listing_click', { listing_id: listingId, user_id: currentUser?.uid });
-        alert("Función para reportar en desarrollo. ¡Gracias por ayudarnos a mantener la comunidad segura!");
-    };
-
-    if (loading) return <p className="text-center">Cargando anuncio...</p>;
-    if (!listing) return <p className="text-center">Anuncio no encontrado.</p>;
-
-    const isJob = listing.type === 'trabajo';
-    const publisherLabel = isJob ? 'Reclutador' : 'Vendedor';
-    const slides = listing.photos?.map(photo => ({ src: photo.full })) || [];
-    const pageUrl = window.location.href;
-    const shareText = `¡Mira este anuncio en MercadoNica: ${listing.title}!`;
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + pageUrl)}`;
-    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}`;
-
-    return (
-        <>
-            <div className="bg-white p-4 sm:p-8 rounded-lg shadow-lg max-w-4xl mx-auto">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="relative">
-                        <img src={mainImage || 'https://placehold.co/600x400'} alt={listing.title} className="w-full h-80 object-cover rounded-lg mb-4 cursor-pointer" onClick={() => openLightboxOn(listing.photos.findIndex(p => p.full === mainImage))} />
-                        {currentUser && ( <button onClick={toggleFavorite} className="absolute top-4 right-4 bg-white p-2 rounded-full shadow-md"><HeartIcon isFavorite={isFavorite} className={`w-6 h-6 ${isFavorite ? 'text-red-500' : 'text-gray-400'}`} /></button> )}
-                        {listing.photos && listing.photos.length > 1 && (
-                            <div className="flex space-x-2 overflow-x-auto">
-                                {listing.photos.map((photo, index) => (
-                                    <img key={index} src={photo.thumb} onClick={() => setMainImage(photo.full)} className={`h-20 w-20 object-cover rounded-md cursor-pointer ${mainImage === photo.full ? 'border-2 border-blue-500' : ''}`} alt={`Thumbnail ${index+1}`} />
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                    
-                    <div>
-                        <span className="text-sm font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{listing.category}</span>
-                        <h1 className="text-3xl font-bold my-2">{listing.title}</h1>
-
-                        {isJob ? (
-                            <div
-                                className="text-xl font-semibold text-gray-700 mb-1 cursor-pointer hover:text-blue-600 hover:underline"
-                                onClick={() => setView({ page: 'companyProfile', userId: listing.userId })}
-                            >
-                                {listing.companyName || listing.userName}
-                            </div>
-                        ) : null}
-
-                        <p className="text-3xl font-bold text-blue-600 mb-4">{isJob ? (listing.salary || 'Salario a convenir') : (listing.price ? `C$ ${new Intl.NumberFormat('es-NI').format(listing.price)}` : 'Precio a Consultar')}</p>
-                        
-                        {currentUser?.isPremium && currentUser.uid === listing.userId && (
-                            <div className="my-4 p-4 border rounded-md bg-violet-50 text-violet-800">
-                                <h3 className="font-semibold text-lg mb-2">Estadísticas Premium</h3>
-                                <div className="flex justify-around text-center">
-                                    <div>
-                                        <p className="font-bold text-2xl">{listing.viewCount || 0}</p>
-                                        <p className="text-sm">Vistas</p>
-                                    </div>
-                                    <div>
-                                        <p className="font-bold text-2xl">{listing.favoriteCount || 0}</p>
-                                        <p className="text-sm">Favoritos</p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {(listing.make || listing.model || listing.year) && (
-                            <div className="mb-4 p-4 border rounded-md bg-gray-50">
-                                <h3 className="font-semibold text-lg mb-2">Detalles del Vehículo</h3>
-                                <div className="grid grid-cols-2 gap-2 text-sm">
-                                    {listing.make && <p><strong>Marca:</strong> {listing.make}</p>}
-                                    {listing.model && <p><strong>Modelo:</strong> {listing.model}</p>}
-                                    {listing.year && <p><strong>Año:</strong> {listing.year}</p>}
-                                    {listing.mileage && <p><strong>Kilometraje:</strong> {listing.mileage} km</p>}
-                                </div>
-                            </div>
-                        )}
-                        <p className="text-gray-600 mb-4 whitespace-pre-wrap">{listing.description || "No se agregó una descripción."}</p>
-                        
-                        <div className="border-t pt-4 space-y-4">
-                            <h3 className="font-semibold text-lg">Información del {publisherLabel}</h3>
-                            <div className="flex items-center space-x-3 p-2 rounded-lg">
-                                <img src={listing.userPhotoURL || `https://i.pravatar.cc/150?u=${listing.userId}`} alt={listing.userName} className="w-10 h-10 rounded-full" />
-                                <div>
-                                    <p className="font-semibold text-gray-800 cursor-pointer hover:underline flex items-center gap-2" onClick={() => setView({ page: 'publicProfile', userId: listing.userId })}>
-                                        {listing.userName}
-                                        {listing.isVerified && <VerifiedIcon />}
-                                    </p>
-                                    <p className="text-sm text-gray-500">{listing.location}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {currentUser && currentUser.uid !== listing.userId && (
-                            <div className="mt-6 space-y-4">
-                                <button onClick={() => navigateToMessages({recipientId: listing.userId, recipientName: listing.userName, recipientPhotoURL: listing.userPhotoURL})} className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-bold transition">Enviar Mensaje</button>
-                                {isJob && listing.applicationContact && (
-                                    <a href={listing.applicationContact.startsWith('http') ? listing.applicationContact : `mailto:${listing.applicationContact}`} target="_blank" rel="noopener noreferrer" className="w-full block text-center bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 font-bold transition">Aplicar (Email/Link)</a>
-                                )}
-                            </div>
-                        )}
-
-                        <div className="mt-6 pt-4 border-t flex flex-col items-center gap-4">
-                            <h4 className="font-semibold text-gray-700">Compartir este anuncio</h4>
-                            <div className="flex justify-center items-center space-x-4">
-                                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center bg-green-500 text-white font-bold py-2 px-5 rounded-lg hover:bg-green-600 transition-colors">
-                                    WhatsApp
-                                </a>
-                                <a href={facebookUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center bg-blue-800 text-white font-bold py-2 px-5 rounded-lg hover:bg-blue-900 transition-colors">
-                                    Facebook
-                                </a>
-                            </div>
-                            <button onClick={handleReportListing} className="text-sm text-gray-500 hover:text-red-600 hover:underline mt-4">
-                                Reportar este anuncio
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <Lightbox open={lightboxOpen} close={() => setLightboxOpen(false)} slides={slides} index={lightboxIndex} />
-        </>
-    );
-}
-
-function AccountSettings({ user, setUser }) {
-    const [displayName, setDisplayName] = useState(user?.displayName || '');
-    const [isSaving, setIsSaving] = useState(false);
-    const [photoFile, setPhotoFile] = useState(null);
-    const [photoPreview, setPhotoPreview] = useState(user?.photoURL || '');
-    const fileInputRef = useRef(null);
-    const [companyInfo, setCompanyInfo] = useState({ name: '', description: '', website: '' });
-    const [companyLogoFile, setCompanyLogoFile] = useState(null);
-    const [companyLogoPreview, setCompanyLogoPreview] = useState('');
-    const companyLogoInputRef = useRef(null);
-
-    useEffect(() => {
-        if (user) {
-            setDisplayName(user.displayName || '');
-            setPhotoPreview(user.photoURL || '');
-            setCompanyInfo({
-                name: user.companyProfile?.name || '',
-                description: user.companyProfile?.description || '',
-                website: user.companyProfile?.website || ''
-            });
-            setCompanyLogoPreview(user.companyProfile?.logoUrl || '');
-        }
-    }, [user]);
-
-    const handlePhotoChange = (e) => {
-        if (e.target.files[0]) {
-            setPhotoFile(e.target.files[0]);
-            setPhotoPreview(URL.createObjectURL(e.target.files[0]));
-        }
-    };
-
-    const handleCompanyLogoChange = (e) => {
-        if (e.target.files[0]) {
-            setCompanyLogoFile(e.target.files[0]);
-            setCompanyLogoPreview(URL.createObjectURL(e.target.files[0]));
-        }
-    };
-
-    const handleSave = async (e) => {
-        e.preventDefault();
-        setIsSaving(true);
-        try {
-            let newPhotoURL = user.photoURL;
-            let companyProfileData = { ...companyInfo };
-
-            if (photoFile) {
-                const photoRef = ref(storage, `profile-pictures/${user.uid}`);
-                await uploadBytes(photoRef, photoFile);
-                newPhotoURL = await getDownloadURL(photoRef);
-            }
-
-            if (companyLogoFile) {
-                const logoRef = ref(storage, `company-logos/${user.uid}`);
-                await uploadBytes(logoRef, companyLogoFile);
-                const newLogoUrl = await getDownloadURL(logoRef);
-                companyProfileData.logoUrl = newLogoUrl;
-            } else {
-                companyProfileData.logoUrl = user.companyProfile?.logoUrl || '';
-            }
-
-            const updatedData = {
-                displayName,
-                photoURL: newPhotoURL,
-                companyProfile: companyProfileData
-            };
-            
-            await updateProfile(auth.currentUser, { displayName, photoURL: newPhotoURL });
-            const userDocRef = doc(db, "users", user.uid);
-            await updateDoc(userDocRef, updatedData);
-            setUser(prev => ({...prev, ...updatedData}));
-            alert("Perfil actualizado con éxito.");
-
-        } catch (error) {
-            console.error("Error al actualizar perfil:", error);
-            alert("Hubo un error al actualizar tu perfil.");
-        }
-        setIsSaving(false);
-    };
-
-    return (
-        <div className="bg-white p-8 rounded-lg shadow-lg max-w-2xl mx-auto">
-            <h2 className="text-2xl font-bold mb-6">Ajustes de Cuenta</h2>
-            <form onSubmit={handleSave} className="space-y-6">
-                <div className="flex flex-col items-center">
-                    <img src={photoPreview || `https://i.pravatar.cc/150?u=${user?.uid}`} alt="Perfil" className="w-24 h-24 rounded-full mb-4 cursor-pointer" onClick={() => fileInputRef.current.click()} />
-                    <input type="file" ref={fileInputRef} onChange={handlePhotoChange} className="hidden" accept="image/*" />
-                    <button type="button" onClick={() => fileInputRef.current.click()} className="text-sm text-blue-600 hover:underline">Cambiar foto</button>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Nombre de Usuario</label>
-                    <input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required />
-                </div>
-                
-                <div className="border-t pt-6">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Perfil de Empresa (para publicar empleos)</h3>
-                    <div className="flex items-center space-x-4 mb-4">
-                        <img src={companyLogoPreview || 'https://placehold.co/100x100/e2e8f0/64748b?text=Logo'} alt="Logo Empresa" className="w-24 h-24 rounded-md object-cover bg-gray-100" />
-                        <div>
-                            <input type="file" ref={companyLogoInputRef} onChange={handleCompanyLogoChange} className="hidden" accept="image/*" />
-                            <button type="button" onClick={() => companyLogoInputRef.current.click()} className="text-sm text-blue-600 hover:underline">Cambiar logo</button>
-                        </div>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Nombre de la Empresa</label>
-                        <input type="text" value={companyInfo.name} onChange={e => setCompanyInfo({...companyInfo, name: e.target.value})} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
-                    </div>
-                    <div className="mt-4">
-                        <label className="block text-sm font-medium text-gray-700">Descripción de la Empresa</label>
-                        <textarea value={companyInfo.description} onChange={e => setCompanyInfo({...companyInfo, description: e.target.value})} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" rows="3"></textarea>
-                    </div>
-                    <div className="mt-4">
-                        <label className="block text-sm font-medium text-gray-700">Sitio Web</label>
-                        <input type="text" placeholder="https://..." value={companyInfo.website} onChange={e => setCompanyInfo({...companyInfo, website: e.target.value})} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm" />
-                    </div>
-                </div>
-
-                <div className="flex justify-end">
-                    <button type="submit" disabled={isSaving} className="bg-blue-600 text-white px-4 py-2 rounded-lg disabled:bg-blue-300 flex items-center">
-                        {isSaving ? <SpinnerIcon /> : 'Guardar Cambios'}
-                    </button>
-                </div>
-            </form>
-        </div>
-    );
-}
-
-function MyListings({ user, setView }) { const [myListings, setMyListings] = useState([]); const [loading, setLoading] = useState(true); const [showDeleteModal, setShowDeleteModal] = useState(null); const [showSoldModal, setShowSoldModal] = useState(null); useEffect(() => { if (!user) return; const q = query(collection(db, "listings"), where("userId", "==", user.uid), orderBy("createdAt", "desc")); const unsubscribe = onSnapshot(q, (snapshot) => { setMyListings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); setLoading(false); }); return () => unsubscribe(); }, [user]); const handleDelete = async (listingToDelete) => { if (!listingToDelete) return; try { if (listingToDelete.photos && listingToDelete.photos.length > 0) { const deletePromises = listingToDelete.photos.map(photo => { try { const fullRef = ref(storage, photo.full); const thumbRef = ref(storage, photo.thumb); return Promise.all([deleteObject(fullRef), deleteObject(thumbRef)]); } catch (e) { console.warn("No se pudo borrar la foto:", e.message); return Promise.resolve(); } }); await Promise.all(deletePromises); } await deleteDoc(doc(db, "listings", listingToDelete.id)); alert("Anuncio eliminado."); } catch (error) { console.error("Error eliminando:", error); alert("Error al eliminar."); } finally { setShowDeleteModal(null); } }; const handleMarkAsSold = async (listingToMark) => { if (!listingToMark) return; try { await updateDoc(doc(db, "listings", listingToMark.id), { status: 'sold' }); alert("Anuncio marcado como vendido."); } catch (error) { console.error("Error marcando como vendido:", error); alert("Error al actualizar."); } finally { setShowSoldModal(null); } }; return ( <> <div className="bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto"><h2 className="text-2xl font-bold mb-6">Mis Anuncios</h2>{loading ? <p>Cargando...</p> : !myListings.length ? <p>No has publicado nada.</p> : <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">{myListings.map(listing => ( <div key={listing.id} className={`border rounded-lg p-2 flex flex-col justify-between ${listing.status !== 'active' ? 'bg-gray-100 opacity-60' : ''}`}><div><img src={listing.photos?.[0]?.thumb || `https://placehold.co/600x400/e2e8f0/64748b?text=${listing.type}`} className="w-full h-32 object-cover rounded-md" /><h3 className="font-semibold truncate mt-2">{listing.title}</h3>{listing.status === 'sold' && <p className="text-sm font-bold text-green-600">VENDIDO</p>}</div><div className="flex gap-2 mt-2"><button onClick={() => setView({ page: 'publish', type: listing.type, listingId: listing.id })} className="w-full bg-blue-500 text-white text-sm font-semibold py-1 rounded-md hover:bg-blue-600">Editar</button>{listing.status === 'active' && listing.type === 'producto' && <button onClick={() => setShowSoldModal(listing)} className="w-full bg-green-500 text-white text-sm font-semibold py-1 rounded-md hover:bg-green-600">Vendido</button>}<button onClick={() => setShowDeleteModal(listing)} className="w-full bg-red-500 text-white text-sm font-semibold py-1 rounded-md hover:bg-red-600">Eliminar</button></div></div> ))}</div>}</div> {showDeleteModal && ( <ConfirmationModal message="¿Seguro que quieres eliminar este anuncio?" onConfirm={() => handleDelete(showDeleteModal)} onCancel={() => setShowDeleteModal(null)} /> )} {showSoldModal && ( <ConfirmationModal message="¿Marcar como vendido? No será visible en búsquedas." onConfirm={() => handleMarkAsSold(showSoldModal)} onCancel={() => setShowSoldModal(null)} /> )} </> ); }
-function FavoritesPage({ user, setView }) { const [favorites, setFavorites] = useState([]); const [loading, setLoading] = useState(true); useEffect(() => { if (!user) return; const q = query(collection(db, "users", user.uid, "favorites"), orderBy("addedAt", "desc")); const unsubscribe = onSnapshot(q, (snapshot) => { setFavorites(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); setLoading(false); }); return () => unsubscribe(); }, [user]); return ( <div className="container mx-auto"><h1 className="text-3xl font-bold mb-8">Mis Favoritos</h1>{loading ? <ListingsSkeleton /> : ( <> <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">{favorites.map(listing => <ListingCard key={listing.id} listing={listing} setView={setView} user={user} />)}</div> {!loading && favorites.length === 0 && <p className="text-center text-gray-500 mt-8">No has guardado favoritos.</p>} </> )}</div> ); }
-function ConfirmationModal({ message, onConfirm, onCancel }) { return ( <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"><div className="bg-white rounded-lg p-6 max-w-sm mx-4"><p className="text-lg mb-4">{message}</p><div className="flex justify-end gap-4"><button onClick={onCancel} className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300">Cancelar</button><button onClick={onConfirm} className="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600">Confirmar</button></div></div></div> ); }
-
-function ChatPage({ activeChat, setActiveChat, currentUser, setUnreadChats, unreadChats }) {
-    const [conversations, setConversations] = useState([]);
-    const [messages, setMessages] = useState([]);
-    const [newMessage, setNewMessage] = useState('');
-    const messagesEndRef = useRef(null);
-    const textareaRef = useRef(null);
-
-    useEffect(() => {
-        if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto';
-            textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-        }
-    }, [newMessage]);
-
-    useEffect(() => {
-        if (!currentUser) return;
-        const q = query(
-            collection(db, "chats"),
-            where("participants", "array-contains", currentUser.uid),
-            orderBy("updatedAt", "desc")
-        );
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const newUnreadState = { ...unreadChats };
-            const convos = snapshot.docs.map(doc => {
-                const data = doc.data();
-                const lastMessage = data.messages?.[data.messages.length - 1];
-                const isUnread = lastMessage && lastMessage.sender !== currentUser.uid && (!data.lastRead || !data.lastRead[currentUser.uid] || data.lastRead[currentUser.uid] < lastMessage.createdAt.toMillis());
-                newUnreadState[doc.id] = isUnread;
-                const recipientId = data.participants.find(p => p !== currentUser.uid);
-                const recipientInfo = data.participantInfo[recipientId] || { displayName: 'Usuario Desconocido' };
-                return { id: doc.id, ...data, recipientInfo, isUnread };
-            });
-            setConversations(convos);
-            setUnreadChats(newUnreadState);
-        }, (error) => {
-            console.error("Error al obtener conversaciones: ", error);
-        });
-        return () => unsubscribe();
-    }, [currentUser]);
-
-    const handleOpenChat = (convo) => {
-        setActiveChat(convo);
-        if (convo.isUnread) {
-            const chatRef = doc(db, "chats", convo.id);
-            updateDoc(chatRef, {
-                [`lastRead.${currentUser.uid}`]: Date.now()
-            });
-        }
-    }
-
-    useEffect(() => {
-        if (activeChat?.id) {
-            const chatRef = doc(db, "chats", activeChat.id);
-            const unsubscribe = onSnapshot(chatRef, (doc) => {
-                if (doc.exists()) {
-                    setMessages(doc.data().messages || []);
-                }
-            });
-            return () => unsubscribe();
-        }
-    }, [activeChat]);
-
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages]);
-
-    const handleSendMessage = async (e) => {
-        e.preventDefault();
-        if (newMessage.trim() === '' || !activeChat || !currentUser) return;
-        const chatRef = doc(db, "chats", activeChat.id);
-        const currentMessages = (await getDoc(chatRef)).data().messages || [];
-        const messageData = { text: newMessage, sender: currentUser.uid, createdAt: new Date() };
-        await updateDoc(chatRef, {
-            messages: [...currentMessages, messageData],
-            updatedAt: serverTimestamp(),
-            [`lastRead.${currentUser.uid}`]: Date.now()
-        });
-        setNewMessage('');
-    };
-
-    return (
-        <div className="flex h-[75vh] bg-white rounded-lg shadow-lg">
-            <div className={`w-full md:w-1/3 border-r ${activeChat && 'hidden md:block'}`}>
-                <div className="p-4 border-b">
-                    <h2 className="text-xl font-bold">Conversaciones</h2>
-                </div>
-                <ul className="overflow-y-auto h-[calc(75vh-65px)]">
-                    {conversations.map(convo => (
-                        <li key={convo.id} onClick={() => handleOpenChat(convo)} className={`p-4 cursor-pointer hover:bg-gray-100 flex items-center justify-between ${activeChat?.id === convo.id ? 'bg-blue-100' : ''}`}>
-                            <div className="flex items-center space-x-3">
-                                <img src={convo.recipientInfo?.photoURL || `https://i.pravatar.cc/150?u=${convo.id}`} alt={convo.recipientInfo?.displayName} className="w-10 h-10 rounded-full" />
-                                <p className="font-semibold">{convo.recipientInfo?.displayName}</p>
-                            </div>
-                            {convo.isUnread && <span className="h-3 w-3 bg-blue-500 rounded-full"></span>}
-                        </li>
-                    ))}
-                </ul>
-            </div>
-            <div className={`w-full md:w-2/3 flex flex-col ${!activeChat && 'hidden md:flex'}`}>
-                {activeChat ? (
-                    <>
-                        <div className="p-4 border-b flex items-center">
-                            <button onClick={() => setActiveChat(null)} className="md:hidden mr-4 text-blue-600"><ArrowLeftIcon /></button>
-                            <img src={activeChat.recipientInfo?.photoURL || `https://i.pravatar.cc/150?u=${activeChat.id}`} alt={activeChat.recipientInfo?.displayName} className="w-10 h-10 rounded-full mr-3" />
-                            <h2 className="text-xl font-bold">{activeChat.recipientInfo?.displayName}</h2>
-                        </div>
-                        <div className="flex-1 p-4 overflow-y-auto bg-gray-50" style={{backgroundImage: "url('https://i.pinimg.com/originals/85/ec/df/85ecdf1c361109f7955d93b450b549d3.jpg')", backgroundSize: '30%', opacity: 0.9}}>
-                            <div className="bg-white bg-opacity-80 p-2 rounded-lg">
-                                {messages.map((msg, index) => {
-                                    const isMyMessage = currentUser && msg.sender === currentUser.uid;
-
-                                    return (
-                                        <div key={index} className={`flex ${isMyMessage ? 'justify-end' : 'justify-start'} mb-4`}>
-                                            <div className={`max-w-xs md:max-w-md p-3 rounded-lg ${isMyMessage ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}`}>
-                                                <p className="whitespace-pre-wrap break-words">{msg.text}</p>
-                                                <span className="text-xs opacity-75 mt-1 block text-right">
-                                                    {msg.createdAt?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                                <div ref={messagesEndRef} />
-                            </div>
-                        </div>
-                        <div className="p-4 border-t bg-white">
-                            <form onSubmit={handleSendMessage} className="flex items-end gap-2">
-                                <textarea ref={textareaRef} value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Escribe un mensaje..." className="flex-1 border-gray-300 rounded-lg p-2 resize-none" rows="1" />
-                                <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg self-end">Enviar</button>
-                            </form>
-                        </div>
-                    </>
-                ) : (
-                    <div className="flex items-center justify-center h-full text-gray-500 text-center p-4">
-                        Selecciona una conversación para empezar a chatear.
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-}
-
-function AdminDashboard() {
-    const [stats, setStats] = useState({ users: 0, listings: 0 });
-    const [allUsers, setAllUsers] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchAdminData = async () => {
-            try {
-                const usersColl = collection(db, "users");
-                const listingsColl = collection(db, "listings");
-                const userSnapshot = await getCountFromServer(usersColl);
-                const listingSnapshot = await getCountFromServer(listingsColl);
-                setStats({ users: userSnapshot.data().count, listings: listingSnapshot.data().count });
-
-                const usersQuery = query(usersColl, orderBy("displayName"));
-                const usersData = await getDocs(usersQuery);
-                setAllUsers(usersData.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-
-            } catch (error) {
-                console.error("Error fetching admin data:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchAdminData();
-    }, []);
-
-    const toggleVerification = async (userId, currentStatus) => {
-        const userRef = doc(db, "users", userId);
-        try {
-            await updateDoc(userRef, { isVerified: !currentStatus });
-            setAllUsers(allUsers.map(u => u.id === userId ? { ...u, isVerified: !currentStatus } : u));
-            alert(`Usuario ${!currentStatus ? 'verificado' : 'desverificado'} con éxito.`);
-        } catch (error) {
-            console.error("Error al cambiar la verificación:", error);
-            alert("No se pudo actualizar el estado del usuario.");
-        }
-    };
-
-    return (
-        <div className="container mx-auto">
-            <h1 className="text-3xl font-bold mb-8">Panel de Administrador</h1>
-            {loading ? (
-                <p>Cargando datos...</p>
-            ) : (
-                <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                        <div className="bg-white p-6 rounded-lg shadow-md text-center">
-                            <h2 className="text-xl font-semibold text-gray-600">Usuarios Totales</h2>
-                            <p className="text-4xl font-bold mt-2">{stats.users}</p>
-                        </div>
-                        <div className="bg-white p-6 rounded-lg shadow-md text-center">
-                            <h2 className="text-xl font-semibold text-gray-600">Anuncios Totales</h2>
-                            <p className="text-4xl font-bold mt-2">{stats.listings}</p>
-                        </div>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-lg shadow-md">
-                        <h2 className="text-2xl font-bold mb-4">Gestionar Verificación de Vendedores</h2>
-                        <p className="text-gray-600 mb-4">Otorga o revoca la insignia de "Vendedor Verificado". Esto dará más confianza a los compradores.</p>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left">
-                                <thead>
-                                    <tr className="border-b">
-                                        <th className="p-2">Usuario</th>
-                                        <th className="p-2">Email</th>
-                                        <th className="p-2 text-center">Estado</th>
-                                        <th className="p-2 text-center">Acción</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {allUsers.map(u => (
-                                        <tr key={u.id} className="border-b hover:bg-gray-50">
-                                            <td className="p-2 font-semibold flex items-center gap-2">
-                                                {u.displayName}
-                                                {u.isVerified && <VerifiedIcon />}
-                                            </td>
-                                            <td className="p-2 text-gray-600">{u.email}</td>
-                                            <td className="p-2 text-center">
-                                                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${u.isVerified ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
-                                                    {u.isVerified ? 'Verificado' : 'No Verificado'}
-                                                </span>
-                                            </td>
-                                            <td className="p-2 text-center">
-                                                <button
-                                                    onClick={() => toggleVerification(u.id, u.isVerified)}
-                                                    className={`px-3 py-1 text-sm font-semibold rounded-md text-white ${u.isVerified ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-green-500 hover:bg-green-600'}`}
-                                                >
-                                                    {u.isVerified ? 'Revocar' : 'Verificar'}
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </>
-            )}
-        </div>
-    );
-}
-
-function AccountPage({ user, setView, handleLogout }) {
-    if (!user) return <p>Cargando perfil...</p>;
-
-    const renderStars = (rating) => {
-        const stars = [];
-        for (let i = 1; i <= 5; i++) {
-            stars.push(<StarIcon key={i} filled={i <= rating} />);
-        }
-        return stars;
-    };
-
-    const handleNotImplemented = () => {
-        alert("Esta función aún no está implementada.");
-    };
-
-    return (
-        <div className="bg-gray-900 text-white min-h-screen -m-4 md:-m-8">
-            <div className="p-4 max-w-3xl mx-auto">
-                <h1 className="text-xl font-bold text-center py-4 md:hidden">Cuenta</h1>
-                <div className="flex items-center space-x-4 p-4">
-                    <img src={user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`} alt="Perfil" className="w-16 h-16 rounded-full" />
-                    <div className="flex-1">
-                        <h2 className="text-lg font-semibold flex items-center gap-2">
-                            {user.displayName}
-                            {user.isVerified && <VerifiedIcon />}
-                        </h2>
-                        <p className="text-sm text-gray-400">{user.location || 'Ubicación no definida'}</p>
-                        <div className="flex items-center mt-1">
-                            <div className="flex">{renderStars(user.rating || 0)}</div>
-                            <span className="text-xs text-gray-400 ml-2">({user.ratingCount || 0})</span>
-                        </div>
-                        <div className="flex space-x-4 text-sm mt-1">
-                            <span><span className="font-bold">{user.followers || 0}</span> Seguidores</span>
-                            <span><span className="font-bold">{user.following || 0}</span> Siguiendo</span>
-                        </div>
-                    </div>
-                </div>
-
-                {user.isPremium ? (
-                    <div onClick={() => setView({ page: 'premiumDashboard' })} className="mx-4 my-4 p-3 bg-violet-800 rounded-lg flex justify-between items-center cursor-pointer hover:bg-violet-700 transition-colors">
-                        <div className="flex items-center space-x-3">
-                            <DiamondIcon />
-                            <span className="font-semibold">Ir a tu Panel Premium</span>
-                        </div>
-                        <ChevronRightIcon />
-                    </div>
-                ) : (
-                    <div onClick={() => setView({ page: 'premiumUpgrade' })} className="mx-4 my-4 p-3 bg-gray-800 rounded-lg flex justify-between items-center cursor-pointer hover:bg-gray-700 transition-colors">
-                        <div className="flex items-center space-x-3">
-                            <DiamondIcon />
-                            <span className="font-semibold">Disfruta los beneficios Premium</span>
-                        </div>
-                        <ChevronRightIcon />
-                    </div>
-                )}
-                
-                <div className="px-4 mt-6">
-                    <h3 className="text-gray-400 font-bold mb-2 text-sm uppercase">Guardados</h3>
-                    <div className="bg-gray-800 rounded-lg">
-                        <MenuItem icon={<HeartIcon isFavorite={true} className="w-6 h-6 text-gray-400"/>} label="Artículos guardados" onClick={() => setView({ page: 'favorites' })} />
-                    </div>
-                </div>
-                <div className="px-4 mt-6">
-                    <h3 className="text-gray-400 font-bold mb-2 text-sm uppercase">Cuenta</h3>
-                    <div className="bg-gray-800 rounded-lg">
-                        <MenuItem icon={<GearIcon />} label="Ajustes de cuenta" onClick={() => setView({ page: 'accountSettings' })} />
-                        <MenuItem icon={<PublicProfileIcon />} label="Perfil público" onClick={() => setView({ page: 'publicProfile', userId: user.uid })} />
-                        <MenuItem icon={<DollarIcon />} label="Mis Anuncios" onClick={() => setView({ page: 'myListings' })} />
-                        <MenuItem icon={<ShieldIcon />} label="Términos y Políticas" onClick={handleNotImplemented} />
-                    </div>
-                </div>
-                <div className="px-4 mt-6">
-                    <h3 className="text-gray-400 font-bold mb-2 text-sm uppercase">Notificaciones</h3>
-                    <div className="bg-gray-800 rounded-lg">
-                         <MenuItem icon={<BellIcon className="w-6 h-6 text-gray-400" />} label="Preferencias" onClick={() => setView({ page: 'notificationPreferences' })} />
-                    </div>
-                </div>
-                <div className="px-4 mt-6">
-                    <h3 className="text-gray-400 font-bold mb-2 text-sm uppercase">Ayuda</h3>
-                    <div className="bg-gray-800 rounded-lg">
-                        <MenuItem icon={<QuestionMarkIcon />} label="Centro de ayuda" onClick={handleNotImplemented} />
-                    </div>
-                </div>
-                <div className="px-4 mt-8 text-center">
-                    <button onClick={handleLogout} className="text-red-400 hover:text-red-300 font-semibold">
-                        Cerrar Sesión
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-function MenuItem({ icon, label, onClick }) {
-    return (
-        <div onClick={onClick} className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-700 transition-colors border-b border-gray-700 last:border-b-0 first:rounded-t-lg last:rounded-b-lg">
-            <div className="flex items-center space-x-4">
-                {icon}
-                <span className="text-white">{label}</span>
-            </div>
-            <ChevronRightIcon />
-        </div>
-    );
-}
-
-function NotificationPreferences({ user, setUser }) {
-    const [prefs, setPrefs] = useState(user?.notifications || { newMessages: true, newJobs: true });
-    const [isSaving, setIsSaving] = useState(false);
-
-    const handleToggle = (key) => {
-        setPrefs(prev => ({ ...prev, [key]: !prev[key] }));
-    };
-
-    const handleSave = async () => {
-        setIsSaving(true);
-        try {
-            const userDocRef = doc(db, "users", user.uid);
-            await updateDoc(userDocRef, { notifications: prefs });
-            setUser(prev => ({ ...prev, notifications: prefs }));
-            alert("Preferencias guardadas.");
-        } catch (error) {
-            console.error("Error al guardar preferencias:", error);
-            alert("No se pudieron guardar los cambios.");
-        }
-        setIsSaving(false);
-    };
-
-    return (
-        <div className="bg-white p-8 rounded-lg shadow-lg max-w-2xl mx-auto">
-            <h2 className="text-2xl font-bold mb-6">Preferencias de Notificaciones</h2>
-            <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <label htmlFor="new-messages" className="font-medium text-gray-700">Nuevos Mensajes</label>
-                    <div
-                        onClick={() => handleToggle('newMessages')}
-                        className={`w-14 h-8 flex items-center bg-gray-300 rounded-full p-1 cursor-pointer transition-colors ${prefs.newMessages ? 'bg-blue-600' : ''}`}
-                    >
-                        <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${prefs.newMessages ? 'translate-x-6' : ''}`}></div>
-                    </div>
-                </div>
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <label htmlFor="new-jobs" className="font-medium text-gray-700">Nuevas Ofertas de Empleo</label>
-                     <div
-                        onClick={() => handleToggle('newJobs')}
-                        className={`w-14 h-8 flex items-center bg-gray-300 rounded-full p-1 cursor-pointer transition-colors ${prefs.newJobs ? 'bg-blue-600' : ''}`}
-                    >
-                        <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${prefs.newJobs ? 'translate-x-6' : ''}`}></div>
-                    </div>
-                </div>
-            </div>
-            <div className="flex justify-end mt-8">
-                <button onClick={handleSave} disabled={isSaving} className="bg-blue-600 text-white px-6 py-2 rounded-lg disabled:bg-blue-300 flex items-center">
-                    {isSaving ? <SpinnerIcon /> : 'Guardar'}
-                </button>
-            </div>
-        </div>
-    );
-}
-
-function PublicProfilePage({ userId, setView, user }) {
-    const [profile, setProfile] = useState(null);
-    const [userListings, setUserListings] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchProfileData = async () => {
-            setLoading(true);
-            try {
-                const profileDocRef = doc(db, 'users', userId);
-                const profileSnap = await getDoc(profileDocRef);
-
-                if (profileSnap.exists()) {
-                    setProfile(profileSnap.data());
-                }
-
-                const listingsQuery = query(
-                    collection(db, 'listings'),
-                    where('userId', '==', userId),
-                    where('status', '==', 'active'),
-                    orderBy('createdAt', 'desc')
-                );
-                const listingsSnapshot = await getDocs(listingsQuery);
-                const listingsData = listingsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                setUserListings(listingsData);
-
-            } catch (error) {
-                console.error("Error al cargar el perfil público:", error);
-            }
-            setLoading(false);
-        };
-
-        if (userId) {
-            fetchProfileData();
-        }
-    }, [userId]);
-
-    if (loading) {
-        return <div className="text-center p-10">Cargando perfil del vendedor...</div>;
-    }
-
-    if (!profile) {
-        return <div className="text-center p-10">Este usuario no fue encontrado.</div>;
-    }
-
-    return (
-        <div className="container mx-auto">
-            <div className="bg-white p-6 rounded-lg shadow-md mb-8 flex items-center space-x-6">
-                <img src={profile.photoURL || `https://i.pravatar.cc/150?u=${userId}`} alt={profile.displayName} className="w-24 h-24 rounded-full border-4 border-gray-200" />
-                <div>
-                    <h1 className="text-3xl font-bold flex items-center gap-2">
-                        {profile.displayName}
-                        {profile.isVerified && <VerifiedIcon className="h-7 w-7 text-blue-500" />}
-                    </h1>
-                    <p className="text-gray-600">{profile.location || 'Ubicación no especificada'}</p>
-                </div>
-            </div>
-
-            <div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">Anuncios de {profile.displayName}</h2>
-                {userListings.length > 0 ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                        {userListings.map(listing => (
-                            <ListingCard key={listing.id} listing={listing} setView={setView} user={user} />
-                        ))}
-                    </div>
-                ) : (
-                    <p className="text-gray-500">Este vendedor no tiene anuncios activos en este momento.</p>
-                )}
-            </div>
-        </div>
-    );
-}
-
-function CompanyProfilePage({ userId, setView, user }) {
-    const [companyProfile, setCompanyProfile] = useState(null);
-    const [userProfile, setUserProfile] = useState(null);
-    const [companyListings, setCompanyListings] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchCompanyData = async () => {
-            if (!userId) return;
-            setLoading(true);
-            try {
-                const userDocRef = doc(db, 'users', userId);
-                const userSnap = await getDoc(userDocRef);
-
-                if (userSnap.exists()) {
-                    const userData = userSnap.data();
-                    setUserProfile(userData);
-                    if (userData.companyProfile) {
-                        setCompanyProfile(userData.companyProfile);
-                    }
-                }
-
-                const listingsQuery = query(
-                    collection(db, 'listings'),
-                    where('userId', '==', userId),
-                    where('type', '==', 'trabajo'),
-                    where('status', '==', 'active'),
-                    orderBy('createdAt', 'desc')
-                );
-                const listingsSnapshot = await getDocs(listingsQuery);
-                const listingsData = listingsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                setCompanyListings(listingsData);
-
-            } catch (error) {
-                console.error("Error al cargar el perfil de la empresa:", error);
-            }
-            setLoading(false);
-        };
-
-        fetchCompanyData();
-    }, [userId]);
-
-    if (loading) {
-        return <div className="text-center p-10">Cargando perfil de la empresa...</div>;
-    }
-
-    if (!companyProfile) {
-        return <div className="text-center p-10">Perfil de empresa no encontrado o no configurado.</div>;
-    }
-
-    return (
-        <div className="container mx-auto">
-            <div className="bg-white p-6 rounded-lg shadow-md mb-8 flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6">
-                <img src={companyProfile.logoUrl || 'https://placehold.co/150x150/e2e8f0/64748b?text=Logo'} alt={companyProfile.name} className="w-32 h-32 rounded-lg border-4 border-gray-200 object-cover" />
-                <div className="text-center sm:text-left">
-                    <h1 className="text-3xl font-bold flex items-center justify-center sm:justify-start gap-2">
-                        {companyProfile.name}
-                        {userProfile?.isVerified && <VerifiedIcon className="h-7 w-7 text-blue-500" />}
-                    </h1>
-                    <p className="text-gray-600 mt-2">{companyProfile.description}</p>
-                    {companyProfile.website && (
-                         <a href={companyProfile.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline mt-2 inline-block">
-                             Visitar sitio web
-                         </a>
-                    )}
-                </div>
-            </div>
-
-            <div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">Vacantes Activas</h2>
-                {companyListings.length > 0 ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                        {companyListings.map(listing => (
-                            <ListingCard key={listing.id} listing={listing} setView={setView} user={user} />
-                        ))}
-                    </div>
-                ) : (
-                    <p className="text-gray-500">Esta empresa no tiene vacantes activas en este momento.</p>
-                )}
-            </div>
-        </div>
-    );
-}
-
-// --- COMPONENTES PREMIUM ---
-
-function PremiumUpgradePage({ user, setUser }) {
-    const [isUpgrading, setIsUpgrading] = useState(false);
-
-    const handleUpgrade = async () => {
-        if (!user) return;
-        setIsUpgrading(true);
-        try {
-            const userDocRef = doc(db, "users", user.uid);
-            await updateDoc(userDocRef, { isPremium: true });
-            setUser(prev => ({ ...prev, isPremium: true }));
-            alert("¡Felicidades! Ahora eres un miembro Premium.");
-        } catch (error) {
-            console.error("Error al actualizar a premium:", error);
-            alert("Hubo un problema al procesar tu solicitud.");
-        } finally {
-            setIsUpgrading(false);
-        }
-    };
-
-    return (
-        <div className="bg-white p-8 rounded-lg shadow-lg max-w-2xl mx-auto text-center">
-            <h1 className="text-3xl font-bold mb-4 text-gray-800">🚀 Desbloquea tu Potencial con Premium</h1>
-            <p className="text-gray-600 mb-8">Lleva tus ventas al siguiente nivel con herramientas exclusivas para vendedores serios.</p>
-            
-            <div className="grid md:grid-cols-2 gap-6 text-left mb-8">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-lg mb-2">📊 Estadísticas Avanzadas</h3>
-                    <p className="text-sm text-gray-600">Mira cuántas personas visitan y guardan tus anuncios en favoritos. Toma decisiones basadas en datos.</p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-lg mb-2">⭐ Anuncios Destacados</h3>
-                    <p className="text-sm text-gray-600">Haz que tus productos resalten en las búsquedas para atraer más compradores.</p>
-                </div>
-            </div>
-
-            <button 
-                onClick={handleUpgrade} 
-                disabled={isUpgrading}
-                className="bg-violet-600 text-white font-bold px-8 py-4 rounded-lg hover:bg-violet-700 transition-colors w-full disabled:bg-violet-300"
-            >
-                {isUpgrading ? <SpinnerIcon /> : '¡Obtener Premium Ahora!'}
-            </button>
-            <p className="text-xs text-gray-500 mt-4">(Esto es una simulación para activar la funcionalidad)</p>
-        </div>
-    );
-}
-
-function PremiumDashboard({ user, setView }) {
-    const [userListings, setUserListings] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchListings = async () => {
-            if (!user) return;
-            setLoading(true);
-            const q = query(collection(db, 'listings'), where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
-            const querySnapshot = await getDocs(q);
-            const listingsData = querySnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-                viewCount: doc.data().viewCount || 0,
-                favoriteCount: doc.data().favoriteCount || 0
-            }));
-            setUserListings(listingsData);
-            setLoading(false);
-        };
-        fetchListings();
-    }, [user]);
-
-    if (loading) return <p className="text-center">Cargando tus estadísticas...</p>;
-
-    const totalViews = userListings.reduce((sum, item) => sum + item.viewCount, 0);
-    const totalFavorites = userListings.reduce((sum, item) => sum + item.favoriteCount, 0);
-
-    return (
-        <div className="bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto">
-            <h1 className="text-3xl font-bold mb-2">Panel Premium</h1>
-            <p className="text-gray-600 mb-6">Aquí puedes ver el rendimiento de todos tus anuncios.</p>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <div className="bg-blue-50 p-6 rounded-lg text-center">
-                    <h2 className="text-xl font-semibold text-blue-800">Vistas Totales</h2>
-                    <p className="text-4xl font-bold mt-2 text-blue-600">{totalViews}</p>
-                </div>
-                 <div className="bg-red-50 p-6 rounded-lg text-center">
-                    <h2 className="text-xl font-semibold text-red-800">Favoritos Totales</h2>
-                    <p className="text-4xl font-bold mt-2 text-red-600">{totalFavorites}</p>
-                </div>
-            </div>
-
-            <h2 className="text-2xl font-bold mb-4">Rendimiento por Anuncio</h2>
-            <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                    <thead>
-                        <tr className="border-b">
-                            <th className="p-2">Anuncio</th>
-                            <th className="p-2 text-center">Vistas</th>
-                            <th className="p-2 text-center">Favoritos</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {userListings.map(listing => (
-                            <tr key={listing.id} className="border-b hover:bg-gray-50">
-                                <td className="p-2 font-semibold">{listing.title}</td>
-                                <td className="p-2 text-center">{listing.viewCount}</td>
-                                <td className="p-2 text-center">{listing.favoriteCount}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
         </div>
     );
 }
