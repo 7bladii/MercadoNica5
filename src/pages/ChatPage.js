@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, arrayUnion, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { ArrowLeftIcon } from '../components/common/Icons';
 
@@ -11,7 +10,7 @@ export default function ChatPage({ activeChat, setActiveChat, currentUser, setUn
     const messagesEndRef = useRef(null);
     const textareaRef = useRef(null);
 
-    // --- MEJORA: Efecto para ajustar la altura del textarea ---
+    // Efecto para ajustar la altura del textarea
     useEffect(() => {
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
@@ -19,7 +18,7 @@ export default function ChatPage({ activeChat, setActiveChat, currentUser, setUn
         }
     }, [newMessage]);
 
-    // --- MEJORA: Carga de conversaciones optimizada ---
+    // Efecto para cargar la LISTA DE CONVERSACIONES
     useEffect(() => {
         if (!currentUser?.uid) return;
 
@@ -30,90 +29,102 @@ export default function ChatPage({ activeChat, setActiveChat, currentUser, setUn
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            const newUnreadState = {};
             const convos = snapshot.docs.map(docSnapshot => {
                 const data = docSnapshot.data();
-                const lastMessage = data.messages?.[data.messages.length - 1];
-
-                // Lógica robusta para determinar si un mensaje está no leído
-                const isUnread = lastMessage && 
-                                 lastMessage.sender !== currentUser.uid && 
+                const lastMessage = data.lastMessage;
+                const isUnread = lastMessage &&
+                                 lastMessage.senderId !== currentUser.uid &&
                                  (!data.lastRead?.[currentUser.uid] || data.lastRead[currentUser.uid].toMillis() < lastMessage.createdAt?.toMillis());
                 
-                newUnreadState[docSnapshot.id] = isUnread;
-
                 const recipientId = data.participants.find(p => p !== currentUser.uid);
-                const recipientInfo = data.participantInfo?.[recipientId] || { displayName: 'Usuario Desconocido', photoURL: '' };
+                const recipientInfo = data.participantInfo?.[recipientId] || { displayName: 'Usuario Desconocido' };
                 
                 return { id: docSnapshot.id, ...data, recipientInfo, isUnread };
             });
-
             setConversations(convos);
-            setUnreadChats(prevUnread => ({ ...prevUnread, ...newUnreadState }));
-        }, (error) => {
-            console.error("Error al obtener conversaciones: ", error);
-        });
+            // (Opcional) Actualizar el estado global de no leídos
+            const newUnreadState = convos.reduce((acc, convo) => {
+                acc[convo.id] = convo.isUnread;
+                return acc;
+            }, {});
+            setUnreadChats(newUnreadState);
+
+        }, (error) => console.error("Error al obtener conversaciones: ", error));
 
         return () => unsubscribe();
-    }, [currentUser, setUnreadChats]); // Dependencias limpias
+    }, [currentUser, setUnreadChats]);
 
-    // --- CORRECCIÓN + MEJORA: Abrir chat y marcar como leído ---
-    const handleOpenChat = useCallback((convo) => {
-        setActiveChat(convo);
-        if (convo.isUnread) {
-            const chatRef = doc(db, "chats", convo.id);
-            updateDoc(chatRef, {
-                [`lastRead.${currentUser.uid}`]: serverTimestamp() // CORREGIDO: Usa serverTimestamp
-            }).catch(error => console.error("Error al marcar chat como leído:", error));
-        }
-    }, [currentUser, setActiveChat]);
-
-    // --- MEJORA: Listener de mensajes con manejo de errores ---
+    // Efecto para cargar los MENSAJES del chat activo desde la SUBCOLECCIÓN
     useEffect(() => {
         if (!activeChat?.id) {
-            setMessages([]); // Limpia los mensajes si no hay chat activo
+            setMessages([]);
             return;
         }
 
-        const chatRef = doc(db, "chats", activeChat.id);
-        const unsubscribe = onSnapshot(chatRef, (docSnapshot) => {
-            if (docSnapshot.exists()) {
-                setMessages(docSnapshot.data().messages || []);
-            }
-        }, (error) => {
-            console.error(`Error al escuchar mensajes del chat ${activeChat.id}:`, error);
-        });
+        const messagesQuery = query(
+            collection(db, 'chats', activeChat.id, 'messages'),
+            orderBy('createdAt', 'asc')
+        );
+        
+        const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+            const newMessages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setMessages(newMessages);
+        }, (error) => console.error("Error al escuchar mensajes:", error));
 
         return () => unsubscribe();
     }, [activeChat]);
 
-    // --- MEJORA: Scroll automático al último mensaje ---
+    // Efecto para hacer scroll al último mensaje
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
-    // --- CORRECCIÓN + MEJORA: Enviar un nuevo mensaje ---
+    // Función para abrir un chat y marcarlo como leído
+    const handleOpenChat = useCallback((convo) => {
+        setActiveChat(convo);
+        if (convo.isUnread) {
+            const chatRef = doc(db, "chats", convo.id);
+            updateDoc(chatRef, { [`lastRead.${currentUser.uid}`]: serverTimestamp() })
+                .catch(error => console.error("Error al marcar chat como leído:", error));
+        }
+    }, [currentUser, setActiveChat]);
+
+    // Función para ENVIAR un nuevo mensaje
     const handleSendMessage = useCallback(async (e) => {
         e.preventDefault();
         if (newMessage.trim() === '' || !activeChat?.id || !currentUser?.uid) return;
 
-        const chatRef = doc(db, "chats", activeChat.id);
+        const trimmedMessage = newMessage.trim();
+        setNewMessage('');
 
+        // Referencias para el batch
+        const chatRef = doc(db, "chats", activeChat.id);
+        const newMessageRef = doc(collection(db, "chats", activeChat.id, "messages")); // Ref a un nuevo doc
+
+        // Datos del nuevo mensaje. Usa `sender` para coincidir con el campo de la base de datos.
         const messageData = {
-            text: newMessage.trim(),
-            sender: currentUser.uid,
-            createdAt: Timestamp.now() // CORREGIDO: Usa Timestamp.now() para arrayUnion
+            text: trimmedMessage,
+            sender: currentUser.uid, // CORRECCIÓN: Usar 'sender' en lugar de 'senderId'
+            createdAt: serverTimestamp()
         };
 
         try {
-            await updateDoc(chatRef, {
-                messages: arrayUnion(messageData),
+            const batch = writeBatch(db);
+            
+            // 1. Crea el nuevo mensaje en la subcolección
+            batch.set(newMessageRef, messageData);
+
+            // 2. Actualiza el chat principal con la info del último mensaje para las vistas previas
+            batch.update(chatRef, {
                 updatedAt: serverTimestamp(),
-                [`lastRead.${currentUser.uid}`]: serverTimestamp() // CORREGIDO: Usa serverTimestamp para consistencia
+                lastMessage: messageData,
             });
-            setNewMessage('');
+
+            await batch.commit();
+
         } catch (error) {
             console.error("Error al enviar el mensaje:", error);
+            setNewMessage(trimmedMessage); // Devuelve el texto si falla
         }
     }, [newMessage, activeChat, currentUser]);
 
@@ -121,9 +132,7 @@ export default function ChatPage({ activeChat, setActiveChat, currentUser, setUn
         <div className="flex h-[75vh] bg-white rounded-lg shadow-lg">
             {/* Columna de la lista de conversaciones */}
             <div className={`w-full md:w-1/3 border-r ${activeChat && 'hidden md:block'}`}>
-                <div className="p-4 border-b">
-                    <h2 className="text-xl font-bold">Conversaciones</h2>
-                </div>
+                <div className="p-4 border-b"><h2 className="text-xl font-bold">Conversaciones</h2></div>
                 <ul className="overflow-y-auto h-[calc(75vh-65px)]">
                     {conversations.map(convo => (
                         <li key={convo.id} onClick={() => handleOpenChat(convo)} className={`p-4 cursor-pointer hover:bg-gray-100 flex items-center justify-between ${activeChat?.id === convo.id ? 'bg-blue-100' : ''}`}>
@@ -131,7 +140,7 @@ export default function ChatPage({ activeChat, setActiveChat, currentUser, setUn
                                 <img src={convo.recipientInfo?.photoURL || `https://i.pravatar.cc/150?u=${convo.id}`} alt={convo.recipientInfo?.displayName} className="w-10 h-10 rounded-full flex-shrink-0" />
                                 <div className="flex-grow overflow-hidden">
                                     <p className="font-semibold truncate">{convo.recipientInfo?.displayName}</p>
-                                    <p className="text-sm text-gray-500 truncate">{convo.listingInfo?.title || 'Conversación general'}</p>
+                                    <p className="text-sm text-gray-500 truncate">{convo.lastMessage?.text || convo.listingInfo?.title || 'Conversación iniciada'}</p>
                                 </div>
                             </div>
                             {convo.isUnread && <span className="h-3 w-3 bg-blue-500 rounded-full flex-shrink-0 ml-2"></span>}
@@ -151,8 +160,7 @@ export default function ChatPage({ activeChat, setActiveChat, currentUser, setUn
                         </div>
                         <div className="flex-1 p-4 overflow-y-auto bg-gray-50">
                             {messages.map(msg => (
-                                // MEJORA: Usar una clave más estable que el índice
-                                <div key={`${msg.sender}-${msg.createdAt?.toMillis()}`} className={`flex ${msg.sender === currentUser?.uid ? 'justify-end' : 'justify-start'} mb-4`}>
+                                <div key={msg.id} className={`flex ${msg.sender === currentUser?.uid ? 'justify-end' : 'justify-start'} mb-4`}>
                                     <div className={`max-w-xs md:max-w-md p-3 rounded-lg ${msg.sender === currentUser?.uid ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}`}>
                                         <p className="whitespace-pre-wrap break-words">{msg.text}</p>
                                         <span className="text-xs opacity-75 mt-1 block text-right">

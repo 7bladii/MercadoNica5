@@ -5,19 +5,19 @@ import {
   getFirestore,
   enableIndexedDbPersistence,
   CACHE_SIZE_UNLIMITED,
-  clearIndexedDbPersistence,
 } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getMessaging, isSupported as messagingSupported } from "firebase/messaging";
 
+// --- CONFIGURACIÓN SEGURA LEYENDO DESDE VARIABLES DE ENTORNO ---
 const firebaseConfig = {
-  apiKey: "AIzaSyChYTYsSLFfWsk2UVm6BsldnaGw42AwDC4",
-  authDomain: "mecardonica.firebaseapp.com",
-  projectId: "mecardonica",
-  storageBucket: "mecardonica.firebasestorage.app",
-  messagingSenderId: "980886283273",
-  appId: "1:980886283273:web:17d0586151cc5c96d944d8",
-  measurementId: "G-RRQL5YD0V9",
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID,
+  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID,
 };
 
 // Singleton app: Previene reinicializaciones
@@ -54,7 +54,6 @@ if (typeof window !== "undefined") {
     });
 }
 
-
 // Proveedores de autenticación
 const googleProvider = new GoogleAuthProvider();
 const facebookProvider = new FacebookAuthProvider();
@@ -73,13 +72,6 @@ const facebookProvider = new FacebookAuthProvider();
       console.warn("El navegador no soporta persistencia offline de Firestore.");
     } else {
       console.warn("Error al habilitar persistencia de Firestore:", error);
-      // Opcional: forzar limpieza si sospechas corrupción severa (solo en desarrollo)
-      // try {
-      //   await clearIndexedDbPersistence(db);
-      //   await enableIndexedDbPersistence(db, { cacheSizeBytes: CACHE_SIZE_UNLIMITED });
-      // } catch (e) {
-      //   console.warn("Reintento de persistencia fallido:", e);
-      // }
     }
   }
 })();

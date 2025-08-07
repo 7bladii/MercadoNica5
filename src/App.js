@@ -1,6 +1,6 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { onAuthStateChanged, signInWithPopup } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { getToken } from "firebase/messaging";
 
 // --- RUTAS DE IMPORTACIÓN CORREGIDAS ---
@@ -25,8 +25,6 @@ const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const NotificationPreferences = lazy(() => import('./pages/NotificationPreferences'));
 const PublicProfilePage = lazy(() => import('./pages/PublicProfilePage'));
 const CompanyProfilePage = lazy(() => import('./pages/CompanyProfilePage'));
-const PremiumUpgradePage = lazy(() => import('./pages/PremiumUpgradePage'));
-const PremiumDashboard = lazy(() => import('./pages/PremiumDashboard'));
 
 // Componente que se muestra mientras carga una página
 const PageLoader = () => (
@@ -44,7 +42,6 @@ export default function App() {
     const [unreadChats, setUnreadChats] = useState({});
     const currentView = history[history.length - 1];
 
-    // Efecto para manejar el estado de autenticación del usuario
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
@@ -54,7 +51,6 @@ export default function App() {
                 if (userDocSnap.exists()) {
                     setUser({ uid: currentUser.uid, ...userDocSnap.data() });
                 } else {
-                    // Crear perfil de usuario si es la primera vez que inicia sesión
                     const newUserProfile = {
                         displayName: currentUser.displayName || "Usuario Anónimo",
                         email: currentUser.email,
@@ -100,61 +96,74 @@ export default function App() {
     const handleFacebookLogin = async () => { try { await signInWithPopup(auth, facebookProvider); } catch (error) { console.error("Error al iniciar sesión con Facebook:", error); if (error.code === 'auth/account-exists-with-different-credential') { alert('Ya tienes una cuenta con este correo electrónico usando otro método.'); } } };
     const handleLogout = () => { auth.signOut(); goHome(); };
 
-    const navigateToMessages = async (chatInfo) => {
-        const currentUserAuth = auth.currentUser;
-        if (!currentUserAuth) {
-            alert("Debes iniciar sesión para enviar mensajes.");
+    // --- FUNCIÓN CORREGIDA: Ahora espera un objeto y construye el chatId ---
+    const navigateToMessages = async (messageData) => { // Cambiado para recibir un objeto
+        if (!user) {
+            alert("Necesitas iniciar sesión para enviar mensajes."); // Mensaje más claro
             return;
         }
-        if (currentUserAuth.uid === chatInfo.recipientId) {
-            alert("No puedes enviarte mensajes a ti mismo.");
+        if (!messageData || !messageData.recipientId) {
+            console.error("navigateToMessages: Datos de destinatario incompletos.", messageData);
+            alert("No se pudo iniciar el chat: información del destinatario faltante.");
             return;
         }
-    
-        const chatId = chatInfo.listingId 
-            ? [currentUserAuth.uid, chatInfo.recipientId].sort().join('_') + `_${chatInfo.listingId}`
-            : [currentUserAuth.uid, chatInfo.recipientId].sort().join('_');
-            
+
+        const currentUserId = user.uid;
+        const recipientId = String(messageData.recipientId); // Asegura que sea una cadena
+        
+        // Construye un chatId consistente ordenando los UIDs
+        const sortedIds = [currentUserId, recipientId].sort();
+        const chatId = sortedIds.join('_');
+
         const chatRef = doc(db, "chats", chatId);
-    
+        
         try {
-            let chatDoc = await getDoc(chatRef);
-    
-            if (!chatDoc.exists()) {
+            const docSnap = await getDoc(chatRef);
+
+            if (docSnap.exists()) {
+                // Si el chat ya existe, lo activamos
+                const chatData = docSnap.data();
+                const recipientInfo = chatData.participantInfo?.[recipientId] || {
+                    displayName: messageData.recipientName,
+                    photoURL: messageData.recipientPhotoURL
+                };
+                setActiveChat({ id: docSnap.id, ...chatData, recipientInfo });
+                setView({ page: 'messages' });
+            } else {
+                // Si el chat no existe, lo creamos
                 const newChatData = {
-                    participants: [currentUserAuth.uid, chatInfo.recipientId],
+                    participants: sortedIds,
                     participantInfo: {
-                        [currentUserAuth.uid]: { displayName: currentUserAuth.displayName || "Usuario Anónimo", photoURL: currentUserAuth.photoURL || `https://i.pravatar.cc/150?u=${currentUserAuth.uid}` },
-                        [chatInfo.recipientId]: { displayName: chatInfo.recipientName, photoURL: chatInfo.recipientPhotoURL }
+                        [currentUserId]: {
+                            displayName: user.displayName,
+                            photoURL: user.photoURL,
+                        },
+                        [recipientId]: {
+                            displayName: messageData.recipientName,
+                            photoURL: messageData.recipientPhotoURL,
+                        }
                     },
-                    listingInfo: chatInfo.listingId ? {
-                        id: chatInfo.listingId,
-                        title: chatInfo.listingTitle,
-                        photoURL: chatInfo.listingPhotoURL
-                    } : null,
-                    messages: [],
+                    lastMessage: null, // Inicialmente sin mensajes
                     createdAt: serverTimestamp(),
-                    updatedAt: serverTimestamp(),
-                    lastRead: {}
+                    listingInfo: messageData.listingId ? {
+                        id: messageData.listingId,
+                        title: messageData.listingTitle,
+                        photoURL: messageData.listingPhotoURL
+                    } : null
                 };
                 await setDoc(chatRef, newChatData);
-                chatDoc = await getDoc(chatRef);
+                setActiveChat({ id: chatId, ...newChatData });
+                setView({ page: 'messages' });
             }
-    
-            const recipientId = chatDoc.data().participants.find(p => p !== currentUserAuth.uid);
-            const recipientInfo = chatDoc.data().participantInfo[recipientId];
-            setActiveChat({ id: chatDoc.id, ...chatDoc.data(), recipientInfo });
-            setView({ page: 'messages' });
-    
         } catch (error) {
-            console.error("Error al crear o navegar al chat:", error);
-            alert("Hubo un problema al iniciar la conversación.");
+            console.error("Error al navegar o crear chat:", error);
+            alert("Ocurrió un problema al cargar o iniciar el chat.");
         }
     };
 
     const renderContent = () => {
         const { page } = currentView;
-        const protectedPages = ['account', 'accountSettings', 'myListings', 'favorites', 'messages', 'publish', 'adminDashboard', 'notificationPreferences', 'premiumUpgrade', 'premiumDashboard'];
+        const protectedPages = ['account', 'accountSettings', 'myListings', 'favorites', 'messages', 'publish', 'adminDashboard', 'notificationPreferences'];
 
         if (protectedPages.includes(page) && !user) {
             return <PleaseLogIn onLogin={handleLogin} onFacebookLogin={handleFacebookLogin} />;
@@ -173,8 +182,6 @@ export default function App() {
             case 'notificationPreferences': return <NotificationPreferences user={user} setUser={setUser} />;
             case 'publicProfile': return <PublicProfilePage userId={currentView.userId} setView={setView} user={user} navigateToMessages={navigateToMessages} />;
             case 'companyProfile': return <CompanyProfilePage userId={currentView.userId} setView={setView} user={user} />;
-            case 'premiumUpgrade': return <PremiumUpgradePage user={user} setUser={setUser} />;
-            case 'premiumDashboard': return <PremiumDashboard user={user} setView={setView} />;
             default: return <HomePage setView={setView} />;
         }
     };

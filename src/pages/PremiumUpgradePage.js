@@ -1,51 +1,81 @@
 import React, { useState } from 'react';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase/config';
-import { SpinnerIcon } from '../components/common/Icons';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { DiamondIcon } from '../components/common/Icons';
 
-export default function PremiumUpgradePage({ user, setUser }) {
-    const [isUpgrading, setIsUpgrading] = useState(false);
+// --- MEJORA 1: Centralizar la configuración ---
+const PREMIUM_PLAN = {
+    name: 'Premium',
+    priceDisplay: '$9.99',
+    amountInCents: 999,
+    currency: 'USD',
+    description: 'Desbloquea estadísticas de tus anuncios, mejora tu visibilidad en las búsquedas y mucho más.'
+};
+
+// --- MEJORA 2: Inicializar Firebase Functions una sola vez ---
+const functions = getFunctions();
+const createTilopayCharge = httpsCallable(functions, 'createTilopayCharge');
+
+
+export default function PremiumUpgradePage({ user }) {
+    // --- NUEVO: Ocultar el componente completamente ---
+    return null;
+
+    // El código de la función `handleUpgrade` y el JSX de la interfaz se mantienen intactos aquí abajo
+    // pero no se ejecutarán ni renderizarán debido a la línea `return null;`
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     const handleUpgrade = async () => {
-        if (!user) return;
-        setIsUpgrading(true);
+        setLoading(true);
+        setError(null);
+
+        if (!user || !user.uid) {
+            setError("Debes iniciar sesión para actualizar tu cuenta.");
+            setLoading(false);
+            return;
+        }
+
         try {
-            const userDocRef = doc(db, "users", user.uid);
-            await updateDoc(userDocRef, { isPremium: true });
-            setUser(prev => ({ ...prev, isPremium: true }));
-            alert("¡Felicidades! Ahora eres un miembro Premium.");
-        } catch (error) {
-            console.error("Error al actualizar a premium:", error);
-            alert("Hubo un problema al procesar tu solicitud.");
-        } finally {
-            setIsUpgrading(false);
+            const result = await createTilopayCharge({
+                amount: PREMIUM_PLAN.amountInCents,
+                currency: PREMIUM_PLAN.currency,
+                userId: user.uid,
+                planName: PREMIUM_PLAN.name
+            });
+            
+            const { url } = result.data;
+            if (url) {
+                window.location.href = url;
+            } else {
+                throw new Error("No se recibió una URL de pago desde el servidor.");
+            }
+        } catch (err) {
+            console.error("Error al iniciar el proceso de pago:", err);
+            setError("No se pudo iniciar el proceso de pago. Por favor, inténtalo de nuevo más tarde.");
+            setLoading(false);
         }
     };
 
     return (
-        <div className="bg-white p-8 rounded-lg shadow-lg max-w-2xl mx-auto text-center">
-            <h1 className="text-3xl font-bold mb-4 text-gray-800">🚀 Desbloquea tu Potencial con Premium</h1>
-            <p className="text-gray-600 mb-8">Lleva tus ventas al siguiente nivel con herramientas exclusivas para vendedores serios.</p>
-
-            <div className="grid md:grid-cols-2 gap-6 text-left mb-8">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-lg mb-2">📊 Estadísticas Avanzadas</h3>
-                    <p className="text-sm text-gray-600">Mira cuántas personas visitan y guardan tus anuncios en favoritos. Toma decisiones basadas en datos.</p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-lg mb-2">⭐ Anuncios Destacados</h3>
-                    <p className="text-sm text-gray-600">Haz que tus productos resalten en las búsquedas para atraer más compradores.</p>
-                </div>
+        <div className="bg-white p-8 rounded-lg shadow-lg max-w-md mx-auto text-center">
+            <DiamondIcon className="h-16 w-16 text-violet-500 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-gray-800 mb-2">Conviértete en {PREMIUM_PLAN.name}</h1>
+            <p className="text-gray-600 mb-6">{PREMIUM_PLAN.description}</p>
+            
+            <div className="my-6 p-4 bg-gray-50 rounded-lg">
+                <span className="text-4xl font-bold text-gray-900">{PREMIUM_PLAN.priceDisplay}</span>
+                <span className="text-gray-500"> / mes</span>
             </div>
 
             <button
                 onClick={handleUpgrade}
-                disabled={isUpgrading}
-                className="bg-violet-600 text-white font-bold px-8 py-4 rounded-lg hover:bg-violet-700 transition-colors w-full disabled:bg-violet-300"
+                disabled={loading || !user}
+                className="w-full bg-violet-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-violet-700 transition disabled:bg-violet-300 disabled:cursor-not-allowed"
             >
-                {isUpgrading ? <SpinnerIcon /> : '¡Obtener Premium Ahora!'}
+                {loading ? 'Procesando...' : `Actualizar a ${PREMIUM_PLAN.name}`}
             </button>
-            <p className="text-xs text-gray-500 mt-4">(Esto es una simulación para activar la funcionalidad)</p>
+
+            {error && <p className="text-red-500 mt-4">{error}</p>}
         </div>
     );
 }

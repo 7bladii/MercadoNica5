@@ -40,7 +40,8 @@ export default function AccountPage({ user, setView, handleLogout }) {
                     </div>
                 </div>
 
-                {user.isPremium ? (
+                {/* --- BLOQUE PREMIUM COMENTADO --- */}
+                {/* {user.isPremium ? (
                     <div onClick={() => setView({ page: 'premiumDashboard' })} className="mx-4 my-4 p-3 bg-violet-800 rounded-lg flex justify-between items-center cursor-pointer hover:bg-violet-700 transition-colors">
                         <div className="flex items-center space-x-3">
                             <DiamondIcon />
@@ -56,7 +57,7 @@ export default function AccountPage({ user, setView, handleLogout }) {
                         </div>
                         <ChevronRightIcon />
                     </div>
-                )}
+                )} */}
 
                 <div className="px-4 mt-6">
                     <h3 className="text-gray-400 font-bold mb-2 text-sm uppercase">Guardados</h3>

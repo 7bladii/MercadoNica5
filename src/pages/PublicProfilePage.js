@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-// Se importa 'increment' para la lógica de seguimiento del lado del cliente
-import { doc, getDoc, collection, query, where, orderBy, getDocs, onSnapshot, writeBatch, serverTimestamp, increment } from 'firebase/firestore';
+// Se elimina 'increment' ya que los contadores se manejan en el backend
+import { doc, getDocs, collection, query, where, orderBy, onSnapshot, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import ListingCard from '../components/listings/ListingCard';
-// Se elimina 'ChatIcon' ya que no se usa
 import { StarIcon, VerifiedIcon, PhoneIcon, EmailIcon, FollowIcon } from '../components/common/Icons';
 
 const StarRating = ({ rating = 0, count = 0 }) => {
@@ -19,7 +18,6 @@ const StarRating = ({ rating = 0, count = 0 }) => {
     );
 };
 
-// Se elimina la prop 'navigateToMessages' que ya no es necesaria
 export default function PublicProfilePage({ userId, setView, user: currentUser }) {
     const [profile, setProfile] = useState(null);
     const [userListings, setUserListings] = useState([]);
@@ -31,6 +29,8 @@ export default function PublicProfilePage({ userId, setView, user: currentUser }
         if (!userId) return;
         const profileDocRef = doc(db, 'users', userId);
         
+        // Este listener se encargará de actualizar los contadores en la UI
+        // cuando la Cloud Function los modifique en la base de datos.
         const unsubscribeProfile = onSnapshot(profileDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 setProfile(docSnap.data());
@@ -47,9 +47,9 @@ export default function PublicProfilePage({ userId, setView, user: currentUser }
                 const listingsQuery = query(collection(db, 'listings'), where('userId', '==', userId), where('status', '==', 'active'), orderBy('createdAt', 'desc'));
                 const listingsSnapshot = await getDocs(listingsQuery);
                 setUserListings(listingsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-            } catch (error) {
-                console.error("Error al cargar los anuncios del usuario:", error);
-            }
+             } catch (error) {
+                 console.error("Error al cargar los anuncios del usuario:", error);
+             }
         };
         fetchListings();
 
@@ -65,52 +65,42 @@ export default function PublicProfilePage({ userId, setView, user: currentUser }
         });
         return () => unsubscribe();
     }, [currentUser, userId]);
-
-    // --- FUNCIÓN PARA SEGUIR/DEJAR DE SEGUIR (CON ACTUALIZACIÓN OPTIMISTA) ---
+    
+    // --- FUNCIÓN CORREGIDA: Ya no actualiza contadores, delega a Cloud Functions ---
     const handleFollow = useCallback(async () => {
         if (!currentUser) {
             alert("Necesitas iniciar sesión para seguir a un usuario.");
             return;
         }
         
+        // Se mantiene la actualización optimista para el estado del botón
+        const originalIsFollowing = isFollowing;
+        setIsFollowing(!originalIsFollowing);
+
         const batch = writeBatch(db);
-        const currentUserRef = doc(db, "users", currentUser.uid);
-        const profileUserRef = doc(db, "users", userId);
         const currentUserFollowingRef = doc(db, "users", currentUser.uid, "following", userId);
         const profileUserFollowersRef = doc(db, "users", userId, "followers", currentUser.uid);
 
-        if (isFollowing) {
+        if (originalIsFollowing) {
+            // Dejar de seguir: Borra los documentos de relación
             batch.delete(currentUserFollowingRef);
             batch.delete(profileUserFollowersRef);
-            batch.update(currentUserRef, { followingCount: increment(-1) });
-            batch.update(profileUserRef, { followersCount: increment(-1) });
         } else {
+            // Seguir: Crea los documentos de relación
             batch.set(currentUserFollowingRef, { followedAt: serverTimestamp() });
             batch.set(profileUserFollowersRef, { followedBy: currentUser.uid, followedAt: serverTimestamp() });
-            batch.update(currentUserRef, { followingCount: increment(1) });
-            batch.update(profileUserRef, { followersCount: increment(1) });
         }
 
         try {
             await batch.commit();
-            
-            // Actualización optimista de la UI para feedback instantáneo
-            const originalIsFollowing = isFollowing;
-            setIsFollowing(!originalIsFollowing);
-            setProfile(prevProfile => {
-                if (!prevProfile) return null;
-                const currentFollowers = prevProfile.followersCount || 0;
-                return {
-                    ...prevProfile,
-                    followersCount: currentFollowers + (originalIsFollowing ? -1 : 1)
-                };
-            });
-
         } catch (error) {
             console.error("Error al seguir/dejar de seguir:", error);
-            alert("Hubo un error al procesar la solicitud. Revisa las reglas de seguridad.");
+            // Revertir el estado del botón si la operación falla
+            setIsFollowing(originalIsFollowing); 
+            alert("Hubo un error al procesar la solicitud.");
         }
-    }, [currentUser, userId, isFollowing, profile]);
+    }, [currentUser, userId, isFollowing]);
+
 
     if (loading) return <div className="text-center p-10 text-white">Cargando perfil...</div>;
     if (!profile) return <div className="text-center p-10 text-white">Este usuario no fue encontrado.</div>;
