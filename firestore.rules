@@ -2,11 +2,10 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    //============================================
+    
     // Funciones de Ayuda CORREGIDAS
     //============================================
-    // Devuelve true si NINGUNA de las keys afectadas
-    // sale de la lista permitida (i.e. affectedKeys ⊆ allowedFields).
+    
     function isUpdatingAllowedFields(allowedFields) {
       return request.resource.data
         .diff(resource.data)
@@ -21,6 +20,7 @@ service cloud.firestore {
         .affectedKeys()
         .hasAny(disallowedFields); // ¡CORREGIDO: Usando hasAny!
     }
+
 
     //============================================
     // Reglas para Perfiles de Usuario (users)
@@ -107,29 +107,22 @@ service cloud.firestore {
     //============================================
     // Reglas para Chats (chats)
     //============================================
-    match /chats/{chatId} {
-      // Permite crear un chat solo si el usuario autenticado es uno de los participantes iniciales.
-      allow create:
-        if request.auth != null
-           && request.auth.uid in request.resource.data.participants;
+   
+match /chats/{chatId} {
+  // Función de ayuda para verificar si el usuario autenticado es
+  // uno de los dos participantes del chat, basándose en el ID del documento.
+ function isParticipant() {
+    return request.auth != null && request.auth.uid in chatId.split('_');
+  }
 
-      // Permite leer, actualizar o eliminar un chat solo si el usuario autenticado es un participante.
-      allow read, update, delete:
-        if request.auth != null
-           && request.auth.uid in resource.data.participants;
-    }
+  // PERMISOS DEL CHAT PRINCIPAL
+  allow read, write: if isParticipant();
 
-    //============================================
-    // Reglas para Mensajes (messages) dentro de chats
-    //============================================
-    match /chats/{chatId}/messages/{messageId} {
-      // Permite leer o crear mensajes solo si el usuario autenticado es un participante del chat padre.
-      allow read, create:
-        if request.auth != null
-           && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
-
-      // No se permite editar ni borrar mensajes una vez enviados.
-      allow update, delete: if false;
+  // PERMISOS DE LA SUBCOLECCIÓN DE MENSAJES
+  match /messages/{msgId} {
+    // Permite leer y crear mensajes si el usuario es participante del chat padre.
+    allow read, create: if isParticipant();
+  }
     }
   }
 }

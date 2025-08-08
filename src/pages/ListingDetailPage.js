@@ -5,6 +5,7 @@ import { logEvent } from "firebase/analytics";
 import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css";
 import { HeartIcon, VerifiedIcon } from '../components/common/Icons';
+import { createOrGetChat } from '../services/chatService';
 
 export default function ListingDetailPage({ listingId, currentUser, navigateToMessages, setView }) {
     const [listing, setListing] = useState(null);
@@ -49,7 +50,7 @@ export default function ListingDetailPage({ listingId, currentUser, navigateToMe
 
     // Efecto para cargar los datos del vendedor y el estado de favorito
     useEffect(() => {
-        if (!listing) return;
+        if (!listing || !listing.userId) return; // Añadida verificación para listing.userId
 
         const fetchSeller = async () => {
             const userRef = doc(db, "users", listing.userId);
@@ -104,6 +105,34 @@ export default function ListingDetailPage({ listingId, currentUser, navigateToMe
     const handleReportListing = () => {
         logEvent(analytics, 'report_listing_click', { listing_id: listingId, user_id: currentUser?.uid });
         alert("Función para reportar en desarrollo. ¡Gracias por ayudarnos a mantener la comunidad segura!");
+    };
+    
+    // --- FUNCIÓN 'handleSendMessage' CORREGIDA Y FINAL ---
+    const handleSendMessage = async () => {
+        if (!currentUser || !listing || !listing.userId) {
+            alert("No se puede iniciar el chat. Faltan datos del usuario o del anuncio.");
+            return;
+        }
+
+        try {
+            // 1. Crea o encuentra el chat
+            const { chatId, chatData } = await createOrGetChat({
+                currentUser: currentUser,
+                recipientId: listing.userId,
+                recipientName: seller?.displayName || 'Usuario',
+                recipientPhotoURL: seller?.photoURL || `https://i.pravatar.cc/150?u=${listing.userId}`,
+                listingId: listing.id,
+                listingTitle: listing.title,
+                listingPhotoURL: listing.photos?.[0]?.thumb || ''
+            });
+
+            // 2. Llama a la función de navegación del padre CON TODOS LOS DATOS
+            navigateToMessages({ chatId, chatData, currentUser });
+
+        } catch (error) {
+            console.error("Error al iniciar el chat:", error);
+            alert("Ocurrió un problema al cargar o iniciar el chat.");
+        }
     };
 
     if (loading) return <p className="text-center p-10">Cargando anuncio...</p>;
@@ -185,21 +214,22 @@ export default function ListingDetailPage({ listingId, currentUser, navigateToMe
                             </div>
                         </div>
 
-                        {currentUser && currentUser.uid !== listing.userId && (
+                        {/* Solo muestra el bloque si hay un usuario logueado */}
+                        {currentUser && (
                             <div className="mt-6 space-y-4">
                                 <button
-                                    onClick={() => navigateToMessages({
-                                        recipientId: listing.userId,
-                                        recipientName: seller?.displayName || 'Usuario',
-                                        recipientPhotoURL: seller?.photoURL || `https://i.pravatar.cc/150?u=${listing.userId}`,
-                                        listingId: listing.id,
-                                        listingTitle: listing.title,
-                                        listingPhotoURL: listing.photos?.[0]?.thumb || ''
-                                    })}
-                                    className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-bold transition"
+                                    onClick={handleSendMessage}
+                                    // Deshabilita el botón si eres el dueño del anuncio
+                                    disabled={currentUser.uid === listing.userId}
+                                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold transition disabled:bg-gray-400 disabled:cursor-not-allowed"
                                 >
-                                    Enviar Mensaje
+                                    {/* Cambia el texto del botón si eres el dueño */}
+                                    {currentUser.uid === listing.userId
+                                        ? "Este es tu anuncio"
+                                        : "Enviar Mensaje"}
                                 </button>
+                                
+                                {/* Se mantiene la lógica para el botón de aplicar a trabajos */}
                                 {isJob && listing.applicationContact && (
                                     <a href={listing.applicationContact.startsWith('http') ? listing.applicationContact : `mailto:${listing.applicationContact}`} target="_blank" rel="noopener noreferrer" className="w-full block text-center bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 font-bold transition">Aplicar (Email/Link)</a>
                                 )}
