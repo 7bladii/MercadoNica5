@@ -109,20 +109,48 @@ service cloud.firestore {
     //============================================
    
 match /chats/{chatId} {
-  // Función de ayuda para verificar si el usuario autenticado es
-  // uno de los dos participantes del chat, basándose en el ID del documento.
- function isParticipant() {
-    return request.auth != null && request.auth.uid in chatId.split('_');
-  }
 
-  // PERMISOS DEL CHAT PRINCIPAL
-  allow read, write: if isParticipant();
+      function authed() { return request.auth != null; }
+      function participantsOfCreate() {
+        return (request.resource.data.participants is list)
+          ? request.resource.data.participants
+          : [];
+      }
+      function isParticipantExisting() {
+        return authed() && (request.auth.uid in resource.data.participants);
+      }
 
-  // PERMISOS DE LA SUBCOLECCIÓN DE MENSAJES
-  match /messages/{msgId} {
-    // Permite leer y crear mensajes si el usuario es participante del chat padre.
-    allow read, create: if isParticipant();
-  }
+      // CREATE: basta con que sea authed y esté dentro de participants (2 miembros)
+      allow create: if authed()
+        && participantsOfCreate().size() == 2
+        && request.auth.uid in participantsOfCreate();
+
+      // READ: solo participantes
+      allow read: if isParticipantExisting();
+
+      // UPDATE: permite a un participante actualizar cualquier campo (más laxo para depurar)
+      allow update: if isParticipantExisting();
+
+      // -------- Subcolección de mensajes --------
+      match /messages/{messageId} {
+        // Solo participantes leen
+        allow read: if authed() &&
+          (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants);
+
+        // Crear mensaje: participante y el sender debe ser el usuario
+        allow create: if authed()
+          && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants)
+          && request.resource.data.sender == request.auth.uid;
+
+        // No se edita ni borra mensajes
+        allow update, delete: if false;
+      }
+    }
+
+    // (si tienes users)
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }

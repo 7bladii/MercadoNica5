@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { 
+    collection, query, where, orderBy, onSnapshot,
+    doc, updateDoc, serverTimestamp, writeBatch
+} from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { ArrowLeftIcon } from '../components/common/Icons';
 
@@ -10,7 +13,7 @@ export default function ChatPage({ activeChat, setActiveChat, currentUser, setUn
     const messagesEndRef = useRef(null);
     const textareaRef = useRef(null);
 
-    // Efecto para ajustar la altura del textarea
+    // Ajusta altura del textarea
     useEffect(() => {
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
@@ -18,7 +21,7 @@ export default function ChatPage({ activeChat, setActiveChat, currentUser, setUn
         }
     }, [newMessage]);
 
-    // Efecto para cargar la LISTA DE CONVERSACIONES
+    // Lista de conversaciones
     useEffect(() => {
         if (!currentUser?.uid) return;
 
@@ -33,7 +36,7 @@ export default function ChatPage({ activeChat, setActiveChat, currentUser, setUn
                 const data = docSnapshot.data();
                 const lastMessage = data.lastMessage;
                 const isUnread = lastMessage &&
-                                 lastMessage.senderId !== currentUser.uid &&
+                                 lastMessage.sender !== currentUser.uid &&
                                  (!data.lastRead?.[currentUser.uid] || data.lastRead[currentUser.uid].toMillis() < lastMessage.createdAt?.toMillis());
                 
                 const recipientId = data.participants.find(p => p !== currentUser.uid);
@@ -42,19 +45,17 @@ export default function ChatPage({ activeChat, setActiveChat, currentUser, setUn
                 return { id: docSnapshot.id, ...data, recipientInfo, isUnread };
             });
             setConversations(convos);
-            // (Opcional) Actualizar el estado global de no leídos
-            const newUnreadState = convos.reduce((acc, convo) => {
+            setUnreadChats(convos.reduce((acc, convo) => {
                 acc[convo.id] = convo.isUnread;
                 return acc;
-            }, {});
-            setUnreadChats(newUnreadState);
+            }, {}));
 
         }, (error) => console.error("Error al obtener conversaciones: ", error));
 
         return () => unsubscribe();
     }, [currentUser, setUnreadChats]);
 
-    // Efecto para cargar los MENSAJES del chat activo desde la SUBCOLECCIÓN
+    // Mensajes del chat activo
     useEffect(() => {
         if (!activeChat?.id) {
             setMessages([]);
@@ -74,12 +75,12 @@ export default function ChatPage({ activeChat, setActiveChat, currentUser, setUn
         return () => unsubscribe();
     }, [activeChat]);
 
-    // Efecto para hacer scroll al último mensaje
+    // Scroll al último mensaje
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
-    // Función para abrir un chat y marcarlo como leído
+    // Abrir chat y marcar como leído
     const handleOpenChat = useCallback((convo) => {
         setActiveChat(convo);
         if (convo.isUnread) {
@@ -89,7 +90,7 @@ export default function ChatPage({ activeChat, setActiveChat, currentUser, setUn
         }
     }, [currentUser, setActiveChat]);
 
-    // Función para ENVIAR un nuevo mensaje
+    // Enviar mensaje
     const handleSendMessage = useCallback(async (e) => {
         e.preventDefault();
         if (newMessage.trim() === '' || !activeChat?.id || !currentUser?.uid) return;
@@ -97,40 +98,33 @@ export default function ChatPage({ activeChat, setActiveChat, currentUser, setUn
         const trimmedMessage = newMessage.trim();
         setNewMessage('');
 
-        // Referencias para el batch
         const chatRef = doc(db, "chats", activeChat.id);
-        const newMessageRef = doc(collection(db, "chats", activeChat.id, "messages")); // Ref a un nuevo doc
+        const newMessageRef = doc(collection(db, "chats", activeChat.id, "messages"));
 
-        // Datos del nuevo mensaje. Usa `sender` para coincidir con el campo de la base de datos.
         const messageData = {
             text: trimmedMessage,
-            sender: currentUser.uid, // CORRECCIÓN: Usar 'sender' en lugar de 'senderId'
+            sender: currentUser.uid,
             createdAt: serverTimestamp()
         };
 
         try {
             const batch = writeBatch(db);
-            
-            // 1. Crea el nuevo mensaje en la subcolección
             batch.set(newMessageRef, messageData);
-
-            // 2. Actualiza el chat principal con la info del último mensaje para las vistas previas
             batch.update(chatRef, {
                 updatedAt: serverTimestamp(),
                 lastMessage: messageData,
             });
-
             await batch.commit();
 
         } catch (error) {
             console.error("Error al enviar el mensaje:", error);
-            setNewMessage(trimmedMessage); // Devuelve el texto si falla
+            setNewMessage(trimmedMessage);
         }
     }, [newMessage, activeChat, currentUser]);
 
     return (
         <div className="flex h-[75vh] bg-white rounded-lg shadow-lg">
-            {/* Columna de la lista de conversaciones */}
+            {/* Lista de conversaciones */}
             <div className={`w-full md:w-1/3 border-r ${activeChat && 'hidden md:block'}`}>
                 <div className="p-4 border-b"><h2 className="text-xl font-bold">Conversaciones</h2></div>
                 <ul className="overflow-y-auto h-[calc(75vh-65px)]">
@@ -149,7 +143,7 @@ export default function ChatPage({ activeChat, setActiveChat, currentUser, setUn
                 </ul>
             </div>
             
-            {/* Columna del chat activo */}
+            {/* Chat activo */}
             <div className={`w-full md:w-2/3 flex flex-col ${!activeChat && 'hidden md:flex'}`}>
                 {activeChat ? (
                     <>
@@ -187,3 +181,4 @@ export default function ChatPage({ activeChat, setActiveChat, currentUser, setUn
         </div>
     );
 }
+
