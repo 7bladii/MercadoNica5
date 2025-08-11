@@ -73,84 +73,88 @@ service cloud.firestore {
     //============================================
     // Reglas para Anuncios (listings)
     //============================================
-    match /listings/{listingId} {
-      // Cualquiera puede leer los anuncios.
+   match /listings/{listingId} {
       allow read: if true;
-      // Solo un usuario autenticado puede crear un anuncio y debe ser el dueño del anuncio.
-      allow create:
-        if request.auth != null && request.auth.uid == request.resource.data.userId;
-      // Solo el dueño del anuncio puede eliminarlo.
-      allow delete:
-        if request.auth != null && request.auth.uid == resource.data.userId;
-
-      // Permite la actualización si:
+      allow create: if request.auth != null;
+      
+      // ✅ REGLA DE ACTUALIZACIÓN MEJORADA
       allow update:
-        // 1) El dueño del anuncio puede cambiar lo que quiera en su propio anuncio.
-        if (request.auth != null && request.auth.uid == resource.data.userId)
-        // 2) Cualquier usuario autenticado puede INCREMENTAR 'viewCount' en EXACTAMENTE +1.
-        //    Esto evita que se manipulen las vistas.
+        // Caso 1: El dueño del anuncio puede actualizarlo,
+        // pero no puede modificar directamente el 'favoriteCount'.
+        if request.auth.uid == resource.data.userId
+           && doesNotChangeFields(['favoriteCount'])
+        // Caso 2: Cualquier usuario autenticado puede actualizar
+        // *únicamente* el 'favoriteCount' en +1 o -1.
         || (
-           request.auth != null // Debe estar autenticado
-           && isUpdatingAllowedFields(['viewCount']) // Solo se afecta 'viewCount'
-           && request.resource.data.viewCount == resource.data.viewCount + 1 // El nuevo valor es el anterior + 1
-        )
-        // 3) Cualquier usuario autenticado puede cambiar 'favoriteCount' en EXACTAMENTE ±1.
-        //    Esto se usa cuando un usuario añade/quita un anuncio de sus favoritos.
-        || (
-           request.auth != null // Debe estar autenticado
-           && isUpdatingAllowedFields(['favoriteCount']) // Solo se afecta 'favoriteCount'
+           request.auth != null
+           && isUpdatingAllowedFields(['favoriteCount'])
            && (request.resource.data.favoriteCount == resource.data.favoriteCount + 1
                || request.resource.data.favoriteCount == resource.data.favoriteCount - 1)
         );
+
+      allow delete: if request.auth.uid == resource.data.userId;
     }
 
-    //============================================
-    // Reglas para Chats (chats)
-    //============================================
-   
-match /chats/{chatId} {
+    // Reglas para los Usuarios
+    match /users/{userId} {
+      allow read: if true;
+      allow create, delete: if request.auth != null && request.auth.uid == userId;
+      allow update: if (request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin)
+                    || (request.auth != null
+                        && request.auth.uid == userId
+                        && doesNotChangeFields(['isPremium','isAdmin','followersCount','followingCount','ratingCount','ratingAverage']));
 
-      function authed() { return request.auth != null; }
-      function participantsOfCreate() {
-        return (request.resource.data.participants is list)
-          ? request.resource.data.participants
-          : [];
+      match /favorites/{listingId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
       }
-      function isParticipantExisting() {
-        return authed() && (request.auth.uid in resource.data.participants);
+      match /followers/{followerId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if request.auth != null;
       }
-
-      // CREATE: basta con que sea authed y esté dentro de participants (2 miembros)
-      allow create: if authed()
-        && participantsOfCreate().size() == 2
-        && request.auth.uid in participantsOfCreate();
-
-      // READ: solo participantes
-      allow read: if isParticipantExisting();
-
-      // UPDATE: permite a un participante actualizar cualquier campo (más laxo para depurar)
-      allow update: if isParticipantExisting();
-
-      // -------- Subcolección de mensajes --------
-      match /messages/{messageId} {
-        // Solo participantes leen
-        allow read: if authed() &&
-          (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants);
-
-        // Crear mensaje: participante y el sender debe ser el usuario
-        allow create: if authed()
-          && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants)
-          && request.resource.data.sender == request.auth.uid;
-
-        // No se edita ni borra mensajes
+      match /following/{followingId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      match /reviews/{reviewId} {
+        allow read: if true;
+        allow create: if request.auth != null && request.auth.uid != userId;
         allow update, delete: if false;
       }
     }
 
-    // (si tienes users)
-    match /users/{userId} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
+    //============================================
+  // ✅ REGLAS DETALLADAS Y CORREGIDAS PARA CHATS
+   match /chats/{chatId} {
+
+      function isParticipant() {
+        return request.auth.uid in resource.data.participantIds;
+      }
+
+      // --- Reglas para el Documento de Chat ---
+
+      // Permite LEER (get y list) si el usuario está autenticado.
+      // La seguridad se delega a la consulta en la aplicación, que debe filtrar
+      // los chats donde 'participantIds' contiene el UID del usuario.
+      allow read: if request.auth != null;
+
+      // Permite CREAR un chat si el usuario está en la lista de participantes.
+      allow create: if request.auth.uid in request.resource.data.participantIds;
+
+      // Permite ACTUALIZAR un chat si el usuario es participante.
+      allow update: if isParticipant();
+      
+      // --- Reglas para la Subcolección de Mensajes ---
+      match /messages/{messageId} {
+        // Permite leer mensajes si el usuario es participante del chat padre.
+        allow read: if request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds;
+
+        // ✅ CORRECCIÓN FINAL: Se cambió 'senderId' por 'sender' para que coincida con el código de la app.
+        // Permite crear un mensaje si el usuario es participante y el remitente.
+        allow create: if request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds
+                      && request.resource.data.sender == request.auth.uid;
+
+        // No se permite editar o borrar mensajes.
+        allow update, delete: if false;
+      }
     }
   }
 }

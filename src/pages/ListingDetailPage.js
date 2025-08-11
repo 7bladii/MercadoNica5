@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { doc, onSnapshot, getDoc, updateDoc, increment, deleteDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { db, analytics } from '../firebase/config';
+// ✅ CORRECCIÓN 1: Importar la FUNCIÓN para obtener analytics, no la variable.
+import { db, getFirebaseAnalytics } from '../firebase/config'; 
 import { logEvent } from "firebase/analytics";
 import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css";
@@ -14,10 +15,28 @@ export default function ListingDetailPage({ listingId, currentUser, navigateToMe
     const [lightboxIndex, setLightboxIndex] = useState(0);
     const [isFavorite, setIsFavorite] = useState(false);
     const [seller, setSeller] = useState(null);
+    // ✅ CORRECCIÓN 2: Añadir un estado para guardar la instancia de analytics.
+    const [analytics, setAnalytics] = useState(null);
+
+    // ✅ CORRECCIÓN 3: Hook para inicializar analytics de forma asíncrona.
+    useEffect(() => {
+        const initializeAnalytics = async () => {
+            // Se obtiene la instancia de forma segura.
+            const analyticsInstance = await getFirebaseAnalytics();
+            if (analyticsInstance) {
+                setAnalytics(analyticsInstance); // Se guarda en el estado.
+                logEvent(analyticsInstance, 'page_view', {
+                    page_title: 'ListingDetail',
+                    page_path: `/listings/${listingId}`,
+                    listing_id: listingId
+                });
+            }
+        };
+        initializeAnalytics();
+    }, [listingId]); // Se ejecuta cada vez que el ID del anuncio cambia.
 
     useEffect(() => {
         const docRef = doc(db, "listings", listingId);
-
         const incrementViewCount = async () => {
             try {
                 const docSnap = await getDoc(docRef);
@@ -50,7 +69,6 @@ export default function ListingDetailPage({ listingId, currentUser, navigateToMe
 
     useEffect(() => {
         if (!listing || !listing.userId) return;
-
         const fetchSeller = async () => {
             const userRef = doc(db, "users", listing.userId);
             try {
@@ -79,7 +97,6 @@ export default function ListingDetailPage({ listingId, currentUser, navigateToMe
     const toggleFavorite = async (e) => {
         e.stopPropagation();
         if (!currentUser || !listing) return;
-
         const favRef = doc(db, "users", currentUser.uid, "favorites", listing.id);
         const listingRef = doc(db, "listings", listing.id);
 
@@ -87,9 +104,13 @@ export default function ListingDetailPage({ listingId, currentUser, navigateToMe
             if (isFavorite) {
                 await deleteDoc(favRef);
                 await updateDoc(listingRef, { favoriteCount: increment(-1) });
+                // ✅ Log event only if analytics is initialized
+                if (analytics) logEvent(analytics, 'remove_from_favorites', { listing_id: listing.id });
             } else {
                 await setDoc(favRef, { ...listing, addedAt: serverTimestamp() });
                 await updateDoc(listingRef, { favoriteCount: increment(1) });
+                // ✅ Log event only if analytics is initialized
+                if (analytics) logEvent(analytics, 'add_to_favorites', { listing_id: listing.id });
             }
         } catch (error) {
             console.error("Error al cambiar estado de favorito:", error);
@@ -102,17 +123,28 @@ export default function ListingDetailPage({ listingId, currentUser, navigateToMe
     };
 
     const handleReportListing = () => {
-        logEvent(analytics, 'report_listing_click', {
-            listing_id: listingId,
-            user_id: currentUser?.uid
-        });
+        // ✅ CORRECCIÓN 4: Usar la instancia de analytics del estado y verificar que no sea null.
+        if (analytics) {
+            logEvent(analytics, 'report_listing_click', {
+                listing_id: listingId,
+                user_id: currentUser?.uid
+            });
+        }
         alert("Función para reportar en desarrollo.");
     };
 
-    const handleSendMessage = async () => {
+    const handleSendMessage = () => {
         if (!currentUser || !listing || !listing.userId) {
             alert("No se puede iniciar el chat. Faltan datos del usuario o del anuncio.");
             return;
+        }
+
+        // ✅ Log event only if analytics is initialized
+        if (analytics) {
+            logEvent(analytics, 'send_message_click', {
+                listing_id: listingId,
+                recipient_id: listing.userId
+            });
         }
 
         navigateToMessages({

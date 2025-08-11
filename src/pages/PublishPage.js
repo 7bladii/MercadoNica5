@@ -3,8 +3,8 @@ import { collection, addDoc, doc, getDoc, updateDoc, serverTimestamp } from 'fir
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { logEvent } from 'firebase/analytics';
 import imageCompression from 'browser-image-compression';
-import { db, storage, analytics } from '../firebase/config';
-// RUTA CORREGIDA: Desde aquí, subimos a 'src', y ahí está 'constants.js'
+// ✅ CORRECCIÓN 1: Importar la FUNCIÓN para obtener analytics.
+import { db, storage, getFirebaseAnalytics } from '../firebase/config'; 
 import { jobCategories, productCategories, nicaraguaCities } from '../constants';
 import { SpinnerIcon } from '../components/common/Icons';
 
@@ -18,9 +18,22 @@ export default function PublishPage({ type, setView, user, listingId }) {
     const [errors, setErrors] = useState({});
     const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
     const [isHighlighted, setIsHighlighted] = useState(false);
+    // ✅ CORRECCIÓN 2: Añadir estado para la instancia de analytics.
+    const [analytics, setAnalytics] = useState(null);
 
     const categories = isJob ? jobCategories : productCategories;
     const isEditing = !!listingId;
+
+    // ✅ CORRECCIÓN 3: Hook para inicializar analytics de forma asíncrona.
+    useEffect(() => {
+        const initializeAnalytics = async () => {
+            const analyticsInstance = await getFirebaseAnalytics();
+            if (analyticsInstance) {
+                setAnalytics(analyticsInstance);
+            }
+        };
+        initializeAnalytics();
+    }, []); // Se ejecuta solo una vez al montar el componente.
 
     useEffect(() => {
         if (isEditing) {
@@ -122,7 +135,16 @@ export default function PublishPage({ type, setView, user, listingId }) {
                 await updateDoc(docRef, listingData);
             } else {
                 const newDocRef = await addDoc(collection(db, "listings"), { ...listingData, createdAt: serverTimestamp(), viewCount: 0, favoriteCount: 0, });
-                logEvent(analytics, 'publish_listing', { user_id: user.uid, listing_id: newDocRef.id, listing_type: type, category: listingData.category, location: listingData.location, });
+                // ✅ CORRECCIÓN 4: Usar la instancia de analytics del estado y verificar que no sea null.
+                if (analytics) {
+                    logEvent(analytics, 'publish_listing', { 
+                        user_id: user.uid, 
+                        listing_id: newDocRef.id, 
+                        listing_type: type, 
+                        category: listingData.category, 
+                        location: listingData.location, 
+                    });
+                }
             }
             setView({ page: 'listings', type: type });
         } catch (error) {

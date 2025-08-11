@@ -36,8 +36,8 @@ export default function ChatPage({ activeChat, setActiveChat, currentUser, setUn
                 const data = docSnapshot.data();
                 const lastMessage = data.lastMessage;
                 const isUnread = lastMessage &&
-                                 lastMessage.sender !== currentUser.uid &&
-                                 (!data.lastRead?.[currentUser.uid] || data.lastRead[currentUser.uid].toMillis() < lastMessage.createdAt?.toMillis());
+                                    lastMessage.sender !== currentUser.uid &&
+                                    (!data.lastRead?.[currentUser.uid] || data.lastRead[currentUser.uid].toMillis() < lastMessage.createdAt?.toMillis());
                 
                 const recipientId = data.participants.find(p => p !== currentUser.uid);
                 const recipientInfo = data.participantInfo?.[recipientId] || { displayName: 'Usuario Desconocido' };
@@ -49,11 +49,19 @@ export default function ChatPage({ activeChat, setActiveChat, currentUser, setUn
                 acc[convo.id] = convo.isUnread;
                 return acc;
             }, {}));
-
+            
         }, (error) => console.error("Error al obtener conversaciones: ", error));
 
         return () => unsubscribe();
     }, [currentUser, setUnreadChats]);
+
+    // Lógica para seleccionar automáticamente la primera conversación si no hay una activa
+    useEffect(() => {
+        if (!activeChat && conversations.length > 0) {
+            handleOpenChat(conversations[0]);
+        }
+    }, [activeChat, conversations]);
+
 
     // Mensajes del chat activo
     useEffect(() => {
@@ -181,4 +189,3 @@ export default function ChatPage({ activeChat, setActiveChat, currentUser, setUn
         </div>
     );
 }
-
