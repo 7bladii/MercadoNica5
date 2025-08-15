@@ -1,17 +1,14 @@
 import React from 'react';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import PleaseLogIn from './PleaseLogIn';
 
+// Se elimina el componente PleaseLogIn, ahora se redirige.
 const ProtectedRoute = ({ children }) => {
-    const { user, loginWithGoogle, loginWithFacebook } = useAuth();
+    const { user } = useAuth();
 
     if (!user) {
-        // Option 1: Redirect to a login page
-        // import { Navigate } from 'react-router-dom';
-        // return <Navigate to="/login" replace />;
-
-        // Option 2: Show the PleaseLogIn component on the same route
-        return <PleaseLogIn onLogin={loginWithGoogle} onFacebookLogin={loginWithFacebook} />;
+        // ✅ CAMBIO: Si no hay usuario, redirige a la página de login.
+        return <Navigate to="/login" replace />;
     }
 
     return children;

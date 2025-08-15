@@ -52,7 +52,7 @@ export default function BottomNavBar({ hasUnreadMessages }) {
                     )}
                 </NavLink>
 
-                <NavLink to={user ? "/account" : "/login-phone"} className={getNavLinkClass}>
+                <NavLink to={user ? "/account" : "/login"} className={getNavLinkClass}>
                      {({ isActive }) => (
                         <>
                             <AccountIcon isActive={isActive} />

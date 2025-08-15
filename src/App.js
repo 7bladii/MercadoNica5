@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useState } from 'react'; // ✅ Se importa useState
+import React, { lazy, Suspense, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 
@@ -26,6 +26,7 @@ const PublicProfilePage = lazy(() => import('./pages/PublicProfilePage'));
 const PhoneSignInPage = lazy(() => import('./pages/PhoneSignInPage'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
 const HelpCenterPage = lazy(() => import('./pages/HelpCenterPage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
 
 
 const PageLoader = () => (
@@ -38,7 +39,6 @@ function AppLayout() {
     const location = useLocation();
     const showBackButton = location.pathname !== '/';
     
-    // ✅ Se añade el estado para manejar las notificaciones de mensajes
     // Nota: La lógica para actualizar este estado (setHasUnreadMessages)
     // debería implementarse escuchando los cambios en tus chats de Firestore.
     const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
@@ -64,6 +64,7 @@ function AppLayout() {
                         <Route path="/login-phone" element={<PhoneSignInPage />} />
                         <Route path="/terms" element={<TermsPage />} />
                         <Route path="/help" element={<HelpCenterPage />} />
+                        <Route path="/login" element={<LoginPage />} />
 
                         {/* Protected Routes */}
                         <Route path="/publish" element={<ProtectedRoute><PublishPage /></ProtectedRoute>} />
@@ -84,7 +85,6 @@ function AppLayout() {
                     </Routes>
                 </Suspense>
             </main>
-            {/* ✅ Se pasa el estado de las notificaciones a la barra de navegación */}
             <BottomNavBar hasUnreadMessages={hasUnreadMessages} />
             <Footer />
         </div>
