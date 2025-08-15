@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useState } from 'react'; // ✅ Se importa useState
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 
@@ -24,7 +24,6 @@ const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const NotificationPreferences = lazy(() => import('./pages/NotificationPreferences'));
 const PublicProfilePage = lazy(() => import('./pages/PublicProfilePage'));
 const PhoneSignInPage = lazy(() => import('./pages/PhoneSignInPage'));
-// ✅ **Paso 1: Importa las nuevas páginas**
 const TermsPage = lazy(() => import('./pages/TermsPage'));
 const HelpCenterPage = lazy(() => import('./pages/HelpCenterPage'));
 
@@ -38,6 +37,11 @@ const PageLoader = () => (
 function AppLayout() {
     const location = useLocation();
     const showBackButton = location.pathname !== '/';
+    
+    // ✅ Se añade el estado para manejar las notificaciones de mensajes
+    // Nota: La lógica para actualizar este estado (setHasUnreadMessages)
+    // debería implementarse escuchando los cambios en tus chats de Firestore.
+    const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
     
     return (
         <div className="min-h-screen font-sans bg-gray-100">
@@ -58,7 +62,6 @@ function AppLayout() {
                         <Route path="/listing/:listingId" element={<ListingDetailPage />} />
                         <Route path="/profile/:userId" element={<PublicProfilePage />} />
                         <Route path="/login-phone" element={<PhoneSignInPage />} />
-                        {/* ✅ **Paso 2: Añade las nuevas rutas** */}
                         <Route path="/terms" element={<TermsPage />} />
                         <Route path="/help" element={<HelpCenterPage />} />
 
@@ -81,7 +84,8 @@ function AppLayout() {
                     </Routes>
                 </Suspense>
             </main>
-            <BottomNavBar />
+            {/* ✅ Se pasa el estado de las notificaciones a la barra de navegación */}
+            <BottomNavBar hasUnreadMessages={hasUnreadMessages} />
             <Footer />
         </div>
     );
