@@ -1,5 +1,4 @@
 import React, { lazy, Suspense } from 'react';
-// ✅ Se importa 'useLocation' para saber en qué página estamos
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 
@@ -8,7 +7,6 @@ import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import BottomNavBar from './components/layout/BottomNavBar';
 import ProtectedRoute from './components/common/ProtectedRoute';
-// ✅ Se importa el nuevo componente BackButton
 import BackButton from './components/common/BackButton';
 
 
@@ -26,6 +24,10 @@ const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const NotificationPreferences = lazy(() => import('./pages/NotificationPreferences'));
 const PublicProfilePage = lazy(() => import('./pages/PublicProfilePage'));
 const PhoneSignInPage = lazy(() => import('./pages/PhoneSignInPage'));
+// ✅ **Paso 1: Importa las nuevas páginas**
+const TermsPage = lazy(() => import('./pages/TermsPage'));
+const HelpCenterPage = lazy(() => import('./pages/HelpCenterPage'));
+
 
 const PageLoader = () => (
     <div className="flex items-center justify-center p-10">
@@ -34,15 +36,18 @@ const PageLoader = () => (
 );
 
 function AppLayout() {
-    // ✅ Se obtiene la ubicación actual para saber si mostrar el botón
     const location = useLocation();
+    const showBackButton = location.pathname !== '/';
     
     return (
         <div className="min-h-screen font-sans bg-gray-100">
             <Header />
             <main className="container mx-auto pb-24 md:pb-8 p-4">
-                {/* ✅ El botón de regresar se muestra si NO estamos en la página de inicio ('/') */}
-                {location.pathname !== '/' && <BackButton />}
+                {showBackButton && (
+                    <div className="mb-4">
+                        <BackButton />
+                    </div>
+                )}
                 
                 <Suspense fallback={<PageLoader />}>
                     <Routes>
@@ -53,6 +58,9 @@ function AppLayout() {
                         <Route path="/listing/:listingId" element={<ListingDetailPage />} />
                         <Route path="/profile/:userId" element={<PublicProfilePage />} />
                         <Route path="/login-phone" element={<PhoneSignInPage />} />
+                        {/* ✅ **Paso 2: Añade las nuevas rutas** */}
+                        <Route path="/terms" element={<TermsPage />} />
+                        <Route path="/help" element={<HelpCenterPage />} />
 
                         {/* Protected Routes */}
                         <Route path="/publish" element={<ProtectedRoute><PublishPage /></ProtectedRoute>} />

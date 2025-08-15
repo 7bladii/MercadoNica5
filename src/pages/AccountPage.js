@@ -1,9 +1,32 @@
 import React from 'react';
-import { VerifiedIcon, StarIcon, DiamondIcon, HeartIcon, GearIcon, PublicProfileIcon, DollarIcon, ShieldIcon, QuestionMarkIcon, BellIcon, ChevronRightIcon } from '../components/common/Icons';
-import MenuItem from '../components/common/MenuItem';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { VerifiedIcon, StarIcon, DiamondIcon, HeartIcon, GearIcon, PublicProfileIcon, ListingsIcon, ShieldIcon, QuestionMarkIcon, BellIcon, ChevronRightIcon } from '../components/common/Icons';
 
-export default function AccountPage({ user, setView, handleLogout }) {
-    if (!user) return <p>Cargando perfil...</p>;
+const MenuItem = ({ icon, label, to, onClick }) => {
+    const content = (
+        <div className="flex items-center justify-between p-4 hover:bg-gray-700 transition-colors w-full">
+            <div className="flex items-center space-x-4">
+                {icon}
+                <span className="text-white">{label}</span>
+            </div>
+            <ChevronRightIcon />
+        </div>
+    );
+
+    return to ? <Link to={to}>{content}</Link> : <button onClick={onClick} className="w-full text-left">{content}</button>;
+};
+
+export default function AccountPage() {
+    const { user, logout } = useAuth();
+    const navigate = useNavigate();
+
+    const handleLogout = async () => {
+        await logout();
+        navigate('/');
+    };
+    
+    if (!user) return <p className="text-center p-10 text-white">Cargando perfil...</p>;
 
     const renderStars = (rating) => {
         const stars = [];
@@ -13,12 +36,8 @@ export default function AccountPage({ user, setView, handleLogout }) {
         return stars;
     };
 
-    const handleNotImplemented = () => {
-        alert("Esta función aún no está implementada.");
-    };
-
     return (
-        <div className="bg-gray-900 text-white min-h-screen -m-4 md:-m-8">
+        <div className="bg-gray-900 text-white min-h-screen -m-4 md:m-0 md:rounded-lg">
             <div className="p-4 max-w-3xl mx-auto">
                 <h1 className="text-xl font-bold text-center py-4 md:hidden">Cuenta</h1>
                 <div className="flex items-center space-x-4 p-4">
@@ -40,53 +59,48 @@ export default function AccountPage({ user, setView, handleLogout }) {
                     </div>
                 </div>
 
-                {/* --- BLOQUE PREMIUM COMENTADO --- */}
-                {/* {user.isPremium ? (
-                    <div onClick={() => setView({ page: 'premiumDashboard' })} className="mx-4 my-4 p-3 bg-violet-800 rounded-lg flex justify-between items-center cursor-pointer hover:bg-violet-700 transition-colors">
+                <div className="px-4 mt-2 mb-4">
+                    <Link to={user.isPremium ? "/premium-dashboard" : "/premium-upgrade"} className="p-3 bg-gray-800 rounded-lg flex justify-between items-center cursor-pointer hover:bg-gray-700 transition-colors">
                         <div className="flex items-center space-x-3">
                             <DiamondIcon />
-                            <span className="font-semibold">Ir a tu Panel Premium</span>
+                            <span className="font-semibold">
+                                {user.isPremium ? 'Ir a tu Panel Premium' : 'Disfruta los beneficios Premium'}
+                            </span>
                         </div>
                         <ChevronRightIcon />
-                    </div>
-                ) : (
-                    <div onClick={() => setView({ page: 'premiumUpgrade' })} className="mx-4 my-4 p-3 bg-gray-800 rounded-lg flex justify-between items-center cursor-pointer hover:bg-gray-700 transition-colors">
-                        <div className="flex items-center space-x-3">
-                            <DiamondIcon />
-                            <span className="font-semibold">Disfruta los beneficios Premium</span>
-                        </div>
-                        <ChevronRightIcon />
-                    </div>
-                )} */}
+                    </Link>
+                </div>
 
                 <div className="px-4 mt-6">
                     <h3 className="text-gray-400 font-bold mb-2 text-sm uppercase">Guardados</h3>
-                    <div className="bg-gray-800 rounded-lg">
-                        <MenuItem icon={<HeartIcon isFavorite={true} className="w-6 h-6 text-gray-400" />} label="Artículos guardados" onClick={() => setView({ page: 'favorites' })} />
+                    <div className="bg-gray-800 rounded-lg overflow-hidden">
+                        <MenuItem icon={<HeartIcon isFavorite={true} className="w-6 h-6 text-gray-400" />} label="Artículos guardados" to="/account/favorites" />
                     </div>
                 </div>
                 <div className="px-4 mt-6">
                     <h3 className="text-gray-400 font-bold mb-2 text-sm uppercase">Cuenta</h3>
-                    <div className="bg-gray-800 rounded-lg">
-                        <MenuItem icon={<GearIcon />} label="Ajustes de cuenta" onClick={() => setView({ page: 'accountSettings' })} />
-                        <MenuItem icon={<PublicProfileIcon />} label="Perfil público" onClick={() => setView({ page: 'publicProfile', userId: user.uid })} />
-                        <MenuItem icon={<DollarIcon />} label="Mis Anuncios" onClick={() => setView({ page: 'myListings' })} />
-                        <MenuItem icon={<ShieldIcon />} label="Términos y Políticas" onClick={handleNotImplemented} />
+                    <div className="bg-gray-800 rounded-lg overflow-hidden">
+                        <MenuItem icon={<GearIcon />} label="Ajustes de cuenta" to="/account/settings" />
+                        <MenuItem icon={<PublicProfileIcon />} label="Perfil público" to={`/profile/${user.uid}`} />
+                        <MenuItem icon={<ListingsIcon className="w-6 h-6 text-gray-400" />} label="Mis Anuncios" to="/account/my-listings" />
+                        {/* ✅ **CAMBIO: Se añade el enlace a la página de términos** */}
+                        <MenuItem icon={<ShieldIcon />} label="Términos y Políticas" to="/terms" />
                     </div>
                 </div>
                 <div className="px-4 mt-6">
                     <h3 className="text-gray-400 font-bold mb-2 text-sm uppercase">Notificaciones</h3>
-                    <div className="bg-gray-800 rounded-lg">
-                        <MenuItem icon={<BellIcon className="w-6 h-6 text-gray-400" />} label="Preferencias" onClick={() => setView({ page: 'notificationPreferences' })} />
+                    <div className="bg-gray-800 rounded-lg overflow-hidden">
+                        <MenuItem icon={<BellIcon className="w-6 h-6 text-gray-400" />} label="Preferencias" to="/account/notifications" />
                     </div>
                 </div>
                 <div className="px-4 mt-6">
                     <h3 className="text-gray-400 font-bold mb-2 text-sm uppercase">Ayuda</h3>
-                    <div className="bg-gray-800 rounded-lg">
-                        <MenuItem icon={<QuestionMarkIcon />} label="Centro de ayuda" onClick={handleNotImplemented} />
+                    <div className="bg-gray-800 rounded-lg overflow-hidden">
+                        {/* ✅ **CAMBIO: Se añade el enlace al centro de ayuda** */}
+                        <MenuItem icon={<QuestionMarkIcon />} label="Centro de ayuda" to="/help" />
                     </div>
                 </div>
-                <div className="px-4 mt-8 text-center">
+                <div className="px-4 mt-8 pb-4 text-center">
                     <button onClick={handleLogout} className="text-red-400 hover:text-red-300 font-semibold">
                         Cerrar Sesión
                     </button>
