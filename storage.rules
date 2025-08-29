@@ -1,11 +1,119 @@
 rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /{allPaths=**} {
-      // Permite que cualquiera lea las imágenes
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    
+    // Funciones de Ayuda CORREGIDAS
+    //============================================
+    
+    function isUpdatingAllowedFields(allowedFields) {
+      return request.resource.data
+        .diff(resource.data)
+        .affectedKeys()
+        .hasOnly(allowedFields); // ¡CORREGIDO: Usando hasOnly!
+    }
+    // Devuelve true si NINGUNO de los campos prohibidos
+    // está siendo modificado.
+    function doesNotChangeFields(disallowedFields) {
+      return !request.resource.data
+        .diff(resource.data)
+        .affectedKeys()
+        .hasAny(disallowedFields); // ¡CORREGIDO: Usando hasAny!
+    }
+
+
+    //============================================
+    // Reglas para Perfiles de Usuario (users)
+    //============================================
+    match /users/{userId} {
+      // Permite la lectura para todos (autenticados o no).
       allow read: if true;
-      // Solo usuarios autenticados pueden subir archivos
-      allow write: if request.auth != null;
+
+      // Permite a un usuario crear o borrar su propio perfil si está autenticado.
+      allow create, delete:
+        if request.auth != null && request.auth.uid == userId;
+
+      // Permite la actualización si:
+      // 1. El usuario autenticado es un administrador (puede cambiar cualquier campo).
+      // O
+      // 2. El usuario se está actualizando a sí mismo, pero SIN cambiar campos protegidos
+      //    como 'isPremium', 'isAdmin', 'followersCount', 'followingCount', 'ratingCount', 'ratingAverage'.
+      allow update:
+        if (request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin)
+        || (request.auth != null
+            && request.auth.uid == userId
+            && doesNotChangeFields(['isPremium','isAdmin','followersCount','followingCount','ratingCount','ratingAverage']));
+
+      // Subcolecciones de usuarios (favorites, followers, following, reviews)
+      match /favorites/{listingId} {
+        // Solo el dueño del perfil puede leer y escribir sus favoritos.
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      match /followers/{followerId} {
+        // Un usuario puede leer sus propios seguidores.
+        // Un usuario puede "seguir" (escribir en la subcolección del seguido) si está autenticado.
+        // La regla para 'create' aquí significa que un usuario puede añadir su UID a la lista de 'followers' de otro.
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if request.auth != null; // Asume que 'write' es para seguir/dejar de seguir a alguien
+      }
+      match /following/{followingId} {
+        // Solo el dueño del perfil puede leer y escribir a quién sigue.
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      match /reviews/{reviewId} {
+        // Cualquiera puede leer las reseñas de un perfil.
+        // Solo usuarios autenticados (que no son el dueño del perfil reseñado) pueden crear reseñas.
+        allow read: if true;
+        allow create: if request.auth != null && request.auth.uid != userId;
+        // No se permite actualizar/eliminar reseñas una vez creadas (o se añadirían reglas específicas si fuera necesario).
+        allow update, delete: if false;
+      }
+    }
+
+    //============================================
+    // Reglas para Anuncios (listings)
+    //============================================
+    match /listings/{listingId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth.uid == resource.data.userId;
+    }
+
+
+    //============================================
+  // ✅ REGLAS DETALLADAS Y CORREGIDAS PARA CHATS
+   match /chats/{chatId} {
+
+      function isParticipant() {
+        return request.auth.uid in resource.data.participantIds;
+      }
+
+      // --- Reglas para el Documento de Chat ---
+
+      // Permite LEER (get y list) si el usuario está autenticado.
+      // La seguridad se delega a la consulta en la aplicación, que debe filtrar
+      // los chats donde 'participantIds' contiene el UID del usuario.
+      allow read: if request.auth != null;
+
+      // Permite CREAR un chat si el usuario está en la lista de participantes.
+      allow create: if request.auth.uid in request.resource.data.participantIds;
+
+      // Permite ACTUALIZAR un chat si el usuario es participante.
+      allow update: if isParticipant();
+      
+      // --- Reglas para la Subcolección de Mensajes ---
+      match /messages/{messageId} {
+        // Permite leer mensajes si el usuario es participante del chat padre.
+        allow read: if request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds;
+
+        // ✅ CORRECCIÓN FINAL: Se cambió 'senderId' por 'sender' para que coincida con el código de la app.
+        // Permite crear un mensaje si el usuario es participante y el remitente.
+        allow create: if request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds
+                      && request.resource.data.sender == request.auth.uid;
+
+        // No se permite editar o borrar mensajes.
+        allow update, delete: if false;
+      }
     }
   }
 }

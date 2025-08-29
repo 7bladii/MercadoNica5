@@ -3,7 +3,7 @@ import { doc, onSnapshot, deleteDoc, setDoc, serverTimestamp } from 'firebase/fi
 import { db } from '../../firebase/config';
 import { CameraIcon, HeartIcon } from '../common/Icons';
 // ✅ Paso 1: Importa el hook useAuth para obtener el usuario actual
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 
 // ✅ Paso 2: Elimina 'setView' y 'user' de los props
 function ListingCard({ listing }) {

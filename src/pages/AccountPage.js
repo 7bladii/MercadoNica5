@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../components/context/AuthContext';
 import { VerifiedIcon, StarIcon, DiamondIcon, HeartIcon, GearIcon, PublicProfileIcon, ListingsIcon, ShieldIcon, QuestionMarkIcon, BellIcon, ChevronRightIcon } from '../components/common/Icons';
 
 const MenuItem = ({ icon, label, to, onClick }) => {

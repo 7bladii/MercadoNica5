@@ -1,14 +1,15 @@
 import React, { lazy, Suspense, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider } from './components/context/AuthContext';
 
 // Layout and common components
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import BottomNavBar from './components/layout/BottomNavBar';
-import ProtectedRoute from './components/common/ProtectedRoute';
 import BackButton from './components/common/BackButton';
 
+// Componentes de rutas protegidas (Guards)
+import { ProtectedRoute, PublicOnlyRoute } from './components/common/Guards'; // Asegúrate que la ruta sea correcta
 
 // Lazy Loading of pages
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -27,10 +28,12 @@ const PhoneSignInPage = lazy(() => import('./pages/PhoneSignInPage'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
 const HelpCenterPage = lazy(() => import('./pages/HelpCenterPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
+const SignupPage = lazy(() => import('./pages/SignupPage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 
 const PageLoader = () => (
-    <div className="flex items-center justify-center p-10">
+    <div className="flex items-center justify-center h-screen">
         <div className="text-xl font-semibold text-gray-700">Cargando...</div>
     </div>
 );
@@ -38,9 +41,6 @@ const PageLoader = () => (
 function AppLayout() {
     const location = useLocation();
     const showBackButton = location.pathname !== '/';
-    
-    // Nota: La lógica para actualizar este estado (setHasUnreadMessages)
-    // debería implementarse escuchando los cambios en tus chats de Firestore.
     const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
     
     return (
@@ -55,33 +55,38 @@ function AppLayout() {
                 
                 <Suspense fallback={<PageLoader />}>
                     <Routes>
-                        {/* Public Routes */}
+                        {/* --- Rutas Públicas (visibles para todos) --- */}
                         <Route path="/" element={<HomePage />} />
                         <Route path="/listings/:type" element={<ListingsPage />} />
                         <Route path="/listings" element={<ListingsPage />} />
                         <Route path="/listing/:listingId" element={<ListingDetailPage />} />
                         <Route path="/profile/:userId" element={<PublicProfilePage />} />
-                        <Route path="/login-phone" element={<PhoneSignInPage />} />
                         <Route path="/terms" element={<TermsPage />} />
                         <Route path="/help" element={<HelpCenterPage />} />
-                        <Route path="/login" element={<LoginPage />} />
+                        <Route path="/publish" element={<PublishPage />} />
 
-                        {/* Protected Routes */}
-                        <Route path="/publish" element={<ProtectedRoute><PublishPage /></ProtectedRoute>} />
-                        <Route path="/edit-listing/:listingId" element={<ProtectedRoute><PublishPage /></ProtectedRoute>} />
-                        <Route path="/messages" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
-                        <Route path="/messages/:chatId" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
-                        <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
-                        <Route path="/account/settings" element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />
-                        <Route path="/account/my-listings" element={<ProtectedRoute><MyListings /></ProtectedRoute>} />
-                        <Route path="/account/favorites" element={<ProtectedRoute><FavoritesPage /></ProtectedRoute>} />
-                        <Route path="/account/notifications" element={<ProtectedRoute><NotificationPreferences /></ProtectedRoute>} />
+                        {/* --- Rutas Solo Públicas (para usuarios NO autenticados) --- */}
+                        <Route element={<PublicOnlyRoute />}>
+                            <Route path="/login" element={<LoginPage />} />
+                            <Route path="/signup" element={<SignupPage />} />
+                            <Route path="/login-phone" element={<PhoneSignInPage />} />
+                        </Route>
+
+                        {/* --- Rutas Protegidas (requieren autenticación) --- */}
+                        <Route element={<ProtectedRoute />}>
+                            <Route path="/account" element={<AccountPage />} />
+                            <Route path="/account/settings" element={<AccountSettings />} />
+                            <Route path="/account/my-listings" element={<MyListings />} />
+                            <Route path="/account/favorites" element={<FavoritesPage />} />
+                            <Route path="/account/notifications" element={<NotificationPreferences />} />
+                            <Route path="/messages" element={<ChatPage />} />
+                            <Route path="/messages/:chatId" element={<ChatPage />} />
+                            <Route path="/edit-listing/:listingId" element={<PublishPage />} />
+                            <Route path="/admin" element={<AdminDashboard />} />
+                        </Route>
                         
-                        {/* Admin Route */}
-                        <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-                        
-                        {/* Catch-all route */}
-                        <Route path="*" element={<HomePage />} />
+                        {/* --- Ruta para contenido no encontrado --- */}
+                        <Route path="*" element={<NotFoundPage />} />
                     </Routes>
                 </Suspense>
             </main>
@@ -91,12 +96,14 @@ function AppLayout() {
     );
 }
 
+// El componente principal que envuelve todo con el Router y el AuthProvider.
+// Esta estructura es correcta y no necesita cambios.
 export default function App() {
     return (
-        <AuthProvider>
-            <Router>
+        <Router>
+            <AuthProvider>
                 <AppLayout />
-            </Router>
-        </AuthProvider>
+            </AuthProvider>
+        </Router>
     );
 }

@@ -1,11 +1,16 @@
 import { initializeApp, getApps } from "firebase/app";
-import { getAnalytics, isSupported as isAnalyticsSupported } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, FacebookAuthProvider } from "firebase/auth";
-// ✅ CAMBIO 1: Se importa la función correcta para persistencia multi-pestaña.
-import { getFirestore, enableMultiTabIndexedDbPersistence, CACHE_SIZE_UNLIMITED } from "firebase/firestore";
+import { 
+    initializeFirestore, 
+    persistentLocalCache, 
+    persistentMultipleTabManager,
+    CACHE_SIZE_UNLIMITED // Se importa para el caché ilimitado
+} from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { getAnalytics, isSupported as isAnalyticsSupported } from "firebase/analytics";
 import { getMessaging, isSupported as isMessagingSupported } from "firebase/messaging";
 
+// --- Configuración de Firebase desde variables de entorno ---
 const firebaseConfig = {
     apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
     authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
@@ -16,23 +21,30 @@ const firebaseConfig = {
     measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID,
 };
 
-// --- INICIALIZACIÓN ÚNICA (SINGLETON PATTERN) ---
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
+// --- Inicialización Única y Robusta de la App ---
+const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 
-// --- SERVICIOS DE FIREBASE ---
+// --- Servicios Principales ---
 const auth = getAuth(app);
-const db = getFirestore(app);
 const storage = getStorage(app);
-
-// Proveedores de autenticación
 const googleProvider = new GoogleAuthProvider();
 const facebookProvider = new FacebookAuthProvider();
 
-// --- INICIALIZACIÓN ASÍNCRONA Y CONDICIONAL DE SERVICIOS ---
+// 🔥 CONFIGURACIÓN MEJORADA: Anti-errores 400 y caché ilimitado
+const db = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+        cacheSizeBytes: CACHE_SIZE_UNLIMITED, // Mejora para el uso offline
+        tabManager: persistentMultipleTabManager()
+    }),
+    experimentalAutoDetectLongPolling: true, // Evita errores 400 en redes restrictivas
+    useFetchStreams: false, // Necesario con long-polling
+});
+
+// --- Servicios Asíncronos y Condicionales ---
 let analytics = null;
 let messaging = null;
 
-export async function getFirebaseAnalytics() {
+async function getFirebaseAnalytics() {
     if (typeof window !== "undefined" && !analytics) {
         if (await isAnalyticsSupported()) {
             analytics = getAnalytics(app);
@@ -41,7 +53,7 @@ export async function getFirebaseAnalytics() {
     return analytics;
 }
 
-export async function getFirebaseMessaging() {
+async function getFirebaseMessaging() {
     if (typeof window !== "undefined" && !messaging) {
         if (await isMessagingSupported()) {
             try {
@@ -54,21 +66,13 @@ export async function getFirebaseMessaging() {
     return messaging;
 }
 
-// --- HABILITAR PERSISTENCIA OFFLINE ---
-(async () => {
-    try {
-        // ✅ CAMBIO 2: Se llama a la función que soporta múltiples pestañas.
-        await enableMultiTabIndexedDbPersistence(db, { cacheSizeBytes: CACHE_SIZE_UNLIMITED });
-        console.log("Persistencia de Firestore (multi-pestaña) habilitada para uso offline.");
-    } catch (error) {
-        if (error.code === "failed-precondition") {
-            console.warn("Persistencia fallida: Múltiples pestañas abiertas con persistencia incompatible.");
-        } else if (error.code === "unimplemented") {
-            console.warn("Persistencia fallida: El navegador actual no soporta la persistencia offline de Firestore.");
-        } else {
-            console.warn("Error al habilitar la persistencia de Firestore:", error);
-        }
-    }
-})();
-
-export { auth, db, storage, googleProvider, facebookProvider };
+// --- Exportaciones para usar en toda la aplicación ---
+export { 
+    auth, 
+    db, 
+    storage, 
+    googleProvider, 
+    facebookProvider, 
+    getFirebaseAnalytics, 
+    getFirebaseMessaging 
+};

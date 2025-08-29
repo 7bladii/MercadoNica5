@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { HomeIcon, MessagesIcon, PlusCircleIcon, ListingsIcon, AccountIcon } from '../common/Icons';
 
 export default function BottomNavBar({ hasUnreadMessages }) {
