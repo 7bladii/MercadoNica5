@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from 'react';
-// ✅ Se importa Link y useNavigate para la navegación
 import { Link, useNavigate } from 'react-router-dom';
-import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
+// ✅ NUEVO: Se importa getDocs y documentId para enriquecer los datos
+import { collection, query, where, orderBy, limit, onSnapshot, getDocs, documentId } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { BriefcaseIcon } from '../components/common/Icons';
 import ListingCard from '../components/listings/ListingCard';
 import ListingsSkeleton from '../components/listings/ListingsSkeleton';
 
-// ✅ El prop 'setView' se ha eliminado
 export default function HomePage() {
     const [recentListings, setRecentListings] = useState([]);
     const [loading, setLoading] = useState(true);
-    // ✅ Se inicializa la función de navegación
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -22,11 +20,35 @@ export default function HomePage() {
             orderBy("createdAt", "desc"),
             limit(8)
         );
-        const unsubscribe = onSnapshot(q, (snapshot) => {
+
+        const unsubscribe = onSnapshot(q, async (snapshot) => {
             const listingsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            // ✅ MEJORA: Enriquecer los anuncios con los datos del negocio, igual que en ListingsPage.
+            const businessIds = [...new Set(listingsData.map(l => l.businessId).filter(Boolean))];
+
+            if (businessIds.length > 0) {
+                try {
+                    const businessesQuery = query(collection(db, "businesses"), where(documentId(), "in", businessIds));
+                    const businessesSnapshot = await getDocs(businessesQuery);
+                    const businessesMap = new Map(businessesSnapshot.docs.map(doc => [doc.id, doc.data()]));
+
+                    listingsData.forEach(listing => {
+                        if (listing.businessId && businessesMap.has(listing.businessId)) {
+                            const business = businessesMap.get(listing.businessId);
+                            listing.businessName = business.businessName;
+                            listing.businessSlug = business.slug;
+                        }
+                    });
+                } catch (error) {
+                    console.error("Error fetching business data for homepage:", error);
+                }
+            }
+            
             setRecentListings(listingsData);
             setLoading(false);
         });
+        
         return () => unsubscribe();
     }, []);
 
@@ -37,7 +59,6 @@ export default function HomePage() {
                 <p className="text-gray-600 text-lg">Tu plataforma para comprar, vender y encontrar empleo en Nicaragua.</p>
             </div>
 
-            {/* ✅ El banner ahora usa 'navigate' para ir a la página de listados de trabajo */}
             <div onClick={() => navigate('/listings/trabajo')} className="bg-blue-600 text-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow cursor-pointer flex items-center justify-between mb-12">
                 <div>
                     <h2 className="text-2xl font-bold">¿Buscas Empleo?</h2>
@@ -48,9 +69,8 @@ export default function HomePage() {
             
             <div className="mb-12">
                 <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Artículos Recientes</h2>
-                {loading ? <ListingsSkeleton /> : (
+                {loading ? <ListingsSkeleton count={8} /> : (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                        {/* ✅ Cada tarjeta ahora es un Link que lleva a su página de detalle */}
                         {recentListings.map(listing => (
                             <Link to={`/listing/${listing.id}`} key={listing.id} className="focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg">
                                 <ListingCard listing={listing} />
@@ -59,7 +79,6 @@ export default function HomePage() {
                     </div>
                 )}
                 <div className="text-center mt-8">
-                    {/* ✅ El botón ahora usa 'navigate' para ir a la página de listados de productos */}
                     <button onClick={() => navigate('/listings/producto')} className="bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
                         Ver todos los artículos
                     </button>
