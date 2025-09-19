@@ -12,13 +12,13 @@ import { getMessaging, isSupported as isMessagingSupported } from "firebase/mess
 
 // --- Configuración de Firebase desde variables de entorno ---
 const firebaseConfig = {
-    apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
-    authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
-    projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
-    storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
-    appId: process.env.REACT_APP_FIREBASE_APP_ID,
-    measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID,
+  apiKey: "AIzaSyAHmaHYecZ3mewPnpOwJMkxY5xs_hNpKsw",
+  authDomain: "mecardonica.firebaseapp.com",
+  projectId: "mecardonica",
+  storageBucket: "mecardonica.firebasestorage.app",
+  messagingSenderId: "980886283273",
+  appId: "1:980886283273:web:17d0586151cc5c96d944d8",
+  measurementId: "G-RRQL5YD0V9"
 };
 
 // --- Inicialización Única y Robusta de la App ---
