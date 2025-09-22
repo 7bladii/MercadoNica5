@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-// Se elimina 'increment' ya que los contadores se manejan en el backend
+import { useParams } from 'react-router-dom'; // ✅ 1. Importar useParams para leer la URL
 import { doc, getDocs, collection, query, where, orderBy, onSnapshot, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { useAuth } from '../components/context/AuthContext'; // ✅ Se importa useAuth
 import ListingCard from '../components/listings/ListingCard';
 import { StarIcon, VerifiedIcon, PhoneIcon, EmailIcon, FollowIcon } from '../components/common/Icons';
 
@@ -18,7 +19,10 @@ const StarRating = ({ rating = 0, count = 0 }) => {
     );
 };
 
-export default function PublicProfilePage({ userId, setView, user: currentUser }) {
+export default function PublicProfilePage() { // ✅ Se eliminan los props que no se usan
+    const { userId } = useParams(); // ✅ 2. Obtener el userId de la URL
+    const { user: currentUser } = useAuth(); // ✅ Se obtiene el usuario actual del contexto de autenticación
+
     const [profile, setProfile] = useState(null);
     const [userListings, setUserListings] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -26,14 +30,17 @@ export default function PublicProfilePage({ userId, setView, user: currentUser }
 
     // Cargar datos del perfil en tiempo real
     useEffect(() => {
-        if (!userId) return;
+        if (!userId) {
+            setLoading(false); // Si no hay userId, dejar de cargar
+            return;
+        }
         const profileDocRef = doc(db, 'users', userId);
         
-        // Este listener se encargará de actualizar los contadores en la UI
-        // cuando la Cloud Function los modifique en la base de datos.
         const unsubscribeProfile = onSnapshot(profileDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 setProfile(docSnap.data());
+            } else {
+                setProfile(null); // Si el perfil no existe, establécelo a null
             }
             setLoading(false);
         }, (error) => {
@@ -44,11 +51,11 @@ export default function PublicProfilePage({ userId, setView, user: currentUser }
         // Cargar los anuncios una sola vez
         const fetchListings = async () => {
              try {
-                const listingsQuery = query(collection(db, 'listings'), where('userId', '==', userId), where('status', '==', 'active'), orderBy('createdAt', 'desc'));
-                const listingsSnapshot = await getDocs(listingsQuery);
-                setUserListings(listingsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+                 const listingsQuery = query(collection(db, 'listings'), where('authorId', '==', userId), where('status', '==', 'active'), orderBy('createdAt', 'desc'));
+                 const listingsSnapshot = await getDocs(listingsQuery);
+                 setUserListings(listingsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
              } catch (error) {
-                 console.error("Error al cargar los anuncios del usuario:", error);
+                  console.error("Error al cargar los anuncios del usuario:", error);
              }
         };
         fetchListings();
@@ -66,14 +73,13 @@ export default function PublicProfilePage({ userId, setView, user: currentUser }
         return () => unsubscribe();
     }, [currentUser, userId]);
     
-    // --- FUNCIÓN CORREGIDA: Ya no actualiza contadores, delega a Cloud Functions ---
+    // Función para seguir/dejar de seguir
     const handleFollow = useCallback(async () => {
         if (!currentUser) {
             alert("Necesitas iniciar sesión para seguir a un usuario.");
             return;
         }
         
-        // Se mantiene la actualización optimista para el estado del botón
         const originalIsFollowing = isFollowing;
         setIsFollowing(!originalIsFollowing);
 
@@ -82,11 +88,9 @@ export default function PublicProfilePage({ userId, setView, user: currentUser }
         const profileUserFollowersRef = doc(db, "users", userId, "followers", currentUser.uid);
 
         if (originalIsFollowing) {
-            // Dejar de seguir: Borra los documentos de relación
             batch.delete(currentUserFollowingRef);
             batch.delete(profileUserFollowersRef);
         } else {
-            // Seguir: Crea los documentos de relación
             batch.set(currentUserFollowingRef, { followedAt: serverTimestamp() });
             batch.set(profileUserFollowersRef, { followedBy: currentUser.uid, followedAt: serverTimestamp() });
         }
@@ -95,15 +99,14 @@ export default function PublicProfilePage({ userId, setView, user: currentUser }
             await batch.commit();
         } catch (error) {
             console.error("Error al seguir/dejar de seguir:", error);
-            // Revertir el estado del botón si la operación falla
             setIsFollowing(originalIsFollowing); 
             alert("Hubo un error al procesar la solicitud.");
         }
     }, [currentUser, userId, isFollowing]);
 
 
-    if (loading) return <div className="text-center p-10 text-white">Cargando perfil...</div>;
-    if (!profile) return <div className="text-center p-10 text-white">Este usuario no fue encontrado.</div>;
+    if (loading) return <div className="text-center p-10">Cargando perfil...</div>;
+    if (!profile) return <div className="text-center p-10">Este usuario no fue encontrado.</div>;
     
     const compliments = profile.compliments || [];
 
@@ -168,7 +171,7 @@ export default function PublicProfilePage({ userId, setView, user: currentUser }
                     {userListings.length > 0 ? (
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                             {userListings.map(listing => (
-                                <ListingCard key={listing.id} listing={listing} setView={setView} user={currentUser} />
+                                <ListingCard key={listing.id} listing={listing} user={currentUser} />
                             ))}
                         </div>
                     ) : (

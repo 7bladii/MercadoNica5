@@ -37,6 +37,7 @@ const CreateBusinessPage = lazy(() => import('./pages/CreateBusinessPage'));
 const BusinessProfilePage = lazy(() => import('./pages/BusinessProfilePage'));
 const EditBusinessPage = lazy(() => import('./pages/EditBusinessPage'));
 const LeaveReviewPage = lazy(() => import('./pages/LeaveReviewPage'));
+const BusinessDashboard = lazy(() => import('./pages/BusinessDashboard')); // ✅ 1. NUEVA PÁGINA IMPORTADA
 
 
 // --- Componentes Auxiliares ---
@@ -90,7 +91,7 @@ function AppLayout() {
     return (
         <div className="min-h-screen font-sans bg-gray-100">
             <Helmet>
-                <title>MercadoNica - Compra, Venta y Empleo en Nicaragua</title>
+                <title>Fenix - Compra, Venta y Empleo en Nicaragua</title>
                 <meta name="description" content="Tu plataforma para comprar, vender y encontrar empleo en Nicaragua. Explora artículos recientes y publica tus anuncios gratis." />
             </Helmet>
             
@@ -126,6 +127,7 @@ function AppLayout() {
                             <Route path="/account/my-listings" element={<MyListings />} />
                             <Route path="/account/favorites" element={<FavoritesPage />} />
                             <Route path="/account/notifications" element={<NotificationPreferences />} />
+                            <Route path="/account/dashboard" element={<BusinessDashboard />} /> {/* ✅ 2. NUEVA RUTA DEL DASHBOARD */}
                             <Route path="/messages" element={<ChatPage />} />
                             <Route path="/messages/:chatId" element={<ChatPage />} />
                             <Route path="/publish" element={<PublishPage />} />
@@ -161,4 +163,3 @@ export default function App() {
         </HelmetProvider>
     );
 }
-

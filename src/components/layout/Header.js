@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-// ✅ Se vuelve a importar GoogleIcon
 import { MessagesIcon, PhoneIcon, GoogleIcon } from '../common/Icons';
 import { ADMIN_UID } from '../../constants';
 
@@ -15,7 +14,7 @@ export default function Header() {
             <nav className="container mx-auto px-4 py-3 flex justify-between items-center">
                 {/* Lado Izquierdo: Logo */}
                 <Link to="/" className="flex items-center cursor-pointer">
-                    <span className="text-2xl font-bold text-blue-600">Mercado<span className="text-sky-500">Nica</span></span>
+                    <span className="text-2xl font-bold text-blue-600">Fen<span className="text-sky-500">ix</span></span>
                 </Link>
 
                 {/* Lado Derecho: Enlaces de Navegación y Perfil */}
@@ -49,9 +48,6 @@ export default function Header() {
                         </div>
                     ) : (
                         <div className="flex items-center space-x-2">
-                             <Link to="/login" className="text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg transition-colors">
-                                Iniciar Sesión
-                             </Link>
                             {/* ✅ Se vuelve a añadir el botón de Google */}
                             <button onClick={loginWithGoogle} className="bg-white text-gray-700 p-2 rounded-full hover:bg-gray-100 border border-gray-300 transition-colors" title="Iniciar con Google">
                                 <GoogleIcon />
